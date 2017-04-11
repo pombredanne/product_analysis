@@ -51,17 +51,17 @@ def user_generator(sim_user_filter=None,user_org_filter=None):
 
 
 if __name__ == "__main__":
-
-    gio_files = ["0110-0409 user_访问量&访问时长.csv","1201-0409 FQY_主要功能数据_U_user_table_PV浏览类.csv","0110-0409 FQY_主要功能数据_U_user_table_action交互类.csv"]
+    gio_files = ["./exame_sample/1201-0330 user_访问量&访问时长.csv","./fqy_sample/1228-0327 FQY_主要功能数据_U_user_table_PV浏览类.csv","./fqy_sample/1228-0327 FQY_主要功能数据_U_user_table_action交互类.csv"]
 
     behavioral_data = behavior_data_generator(files=gio_files,key=["Date","user"])
     users = user_generator(sim_user_filter="user_join_org_info_raw.csv",user_org_filter="user_org_info.txt")
 
+    result = pd.merge(users,behavioral_data, how="left", left_on=["user_id","sim_date"],right_on=["user","Date"])
 
-
-    result = pd.merge(users,behavioral_data,left_on=["user_id","sim_date"],right_on=["user","Date"])
     columns = session_behavior + view_event + click_event
     result[columns] = result[columns].fillna(0)
+
+    print(len(result))
 
 
 
