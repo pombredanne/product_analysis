@@ -41,6 +41,7 @@ def secs_convertor(time=None):
 
     return result
 
+
 def behavior_data_generator(files=[],key=[]):
 
     if len(files) == 0:
@@ -50,11 +51,10 @@ def behavior_data_generator(files=[],key=[]):
         dfs = []
         for file_i in range(len(files)):
             df_names =  key + behavior_names[file_i]
-            dfs.append(pd.read_csv(files[file_i], encoding="utf-16", sep="\t", dtype="str",names=df_names,header=0,parse_dates=['Date']))
+            dfs.append(pd.read_csv(files[file_i], encoding="utf-16", sep="\t", dtype={"user":str},names=df_names,header=0,parse_dates=['Date'],infer_datetime_format=True))
 
     result = reduce(lambda left, right: pd.merge(left, right, how="left", on=["user", "Date"]), dfs).fillna(0)
     result["avg_duration"] = [ secs_convertor(d) for d in result["avg_duration"] ]
-
     return result
 
 
@@ -70,24 +70,20 @@ def user_generator(sim_user_filter=None,user_org_filter=None):
 if __name__ == "__main__":
     gio_files = ["./0412/0101-0409 user_访问量&访问时长.csv","./0412/0101-0409 FQY_主要功能数据_U_user_table_PV浏览类.csv","./0412/0101-0409 FQY_主要功能数据_U_user_table_action交互类.csv"]
 
+
     behavioral_data = behavior_data_generator(files=gio_files,key=["Date","user"])
-
-
     users = user_generator(sim_user_filter="user_join_org_info_raw.csv",user_org_filter="user_org_info.txt")
 
-    result = pd.merge(users,behavioral_data, how="left", left_on=["user_id","sim_date"],right_on=["user","Date"])
-
     columns = session_behavior + view_event + click_event
+    result = pd.merge(users,behavioral_data, how="left", left_on=["user_id","sim_date"],right_on=["user","Date"])
     result[columns] = result[columns].fillna(0)
 
+    behavioral_data.to_csv("./0412_result/user_behavior.csv")
+    users.to_csv("./0412_result/user_sim.csv")
+    result.to_csv("./0412_result/result.csv")
 
-    # print(result["avg_duration"])
 
-    print(len(result))
-    #
-    # behavioral_data.to_csv("./0412_result/user_behavior.csv")
-    # users.to_csv("./0412_result/user_sim.csv")
-    # result.to_csv("./0412_result/result.csv")
+    print("FUCK ! I AM DONE OF IT")
 
 
 
