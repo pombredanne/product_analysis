@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 from functools import reduce
 from simulator import user_simulator
-from datetime import datetime
-import time
 import  re
+import time
+
 
 
 
@@ -24,7 +24,6 @@ click_event = ["dashboard_filter_clck","dashboard_usercohort_clck",
                       "funnel_trend_clck","funnel_create_save_clck",
                       "retention_time_clck","retention_Dimension_clck",
                       "retention_detail_behavior_clck"]
-
 
 behavior_names = [session_behavior,view_event,click_event]
 
@@ -57,7 +56,6 @@ def behavior_data_generator(files=[],key=[]):
     result["avg_duration"] = [ secs_convertor(d) for d in result["avg_duration"] ]
     return result
 
-
 def user_generator(sim_user_filter=None,user_org_filter=None):
 
     users_sim = user_simulator("2017/1/1","2017/4/9", period=1, file_name=sim_user_filter)
@@ -65,18 +63,59 @@ def user_generator(sim_user_filter=None,user_org_filter=None):
 
     return pd.merge(users_sim, user_org_info_df, how="inner", on="user_id")
 
+def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavior=None, number=True,need_user_id=False):
+
+    cohorts_user = []
+    cohorts_num  = []
+    cohorts_per  = []
+
+    for i in range(1,periods-1):
+
+        overlap_tseries = []
+        overlap_num  = []
+        overlap_per  = []
+
+        for j in range( i + 1, periods):
+            cohort_init   = set(sample.loc[ ( sample["week_iso"] == i ) & ( sample["visits"] > 0 ) ]["user_id"])
+            cohort_return = set(sample.loc[ ( sample["week_iso"] == j ) & ( sample["visits"] > 0 ) ]["user_id"])
+
+            overlap_users = list(cohort_init & cohort_return)
+
+            overlap_tseries.append(overlap_users)
+            overlap_num.append(len(overlap_users))
+            overlap_per.append(round(len(overlap_users)/len(cohort_init)*100,2) )
+
+        cohorts_user.append(overlap_tseries)
+        cohorts_num.append(overlap_num)
+        cohorts_per.append(overlap_per)
+
+    if not number:
+        results = ( cohorts_per,  cohorts_user )
+    else:
+        results = ( cohorts_num , cohorts_user )
+
+    return results
+
 
 
 if __name__ == "__main__":
-    gio_files = ["./0412/0101-0409 user_访问量&访问时长.csv","./0412/0101-0409 FQY_主要功能数据_U_user_table_PV浏览类.csv","./0412/0101-0409 FQY_主要功能数据_U_user_table_action交互类.csv"]
-
+    gio_files = ["./0412/0101-0409 user_访问量&访问时长.csv",
+                 "./0412/0101-0409 FQY_主要功能数据_U_user_table_PV浏览类.csv",
+                 "./0412/0101-0409 FQY_主要功能数据_U_user_table_action交互类.csv"]
 
     behavioral_data = behavior_data_generator(files=gio_files,key=["Date","user"])
     users = user_generator(sim_user_filter="user_join_org_info_raw.csv",user_org_filter="user_org_info.txt")
 
+
     columns = session_behavior + view_event + click_event
     result = pd.merge(users,behavioral_data, how="left", left_on=["user_id","sim_date"],right_on=["user","Date"])
     result[columns] = result[columns].fillna(0)
+
+    print("DON'T BE PANICK. DATA ARE PREPARED")
+
+    WN = 10
+    report_per , report_users =  cohort_analysis(periods=WN,sample=result,number=False)
+
 
     behavioral_data.to_csv("./0412_result/user_behavior.csv")
     users.to_csv("./0412_result/user_sim.csv")
