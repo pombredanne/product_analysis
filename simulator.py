@@ -30,6 +30,8 @@ def user_simulator(start_date=None,end_date=None,period=None,file_name=None):
                             parse_dates=["min_day_user_join_org", "update_date"], dtype={"user_id":str}).drop_duplicates("user_id")
 
     result = pd.merge(users_df, user_info_df, how="left", on="user_id")
+    result["week_iso"] = [ d.isocalendar()[1] for d in result["sim_date"] ]
+
 
     return result.loc[result["sim_date"] >= result["min_day_user_join_org"]]
 
@@ -37,8 +39,8 @@ def user_simulator(start_date=None,end_date=None,period=None,file_name=None):
 if __name__ == "__main__":
 
     start_date = "2017/1/1"
-    end_date   = datetime.now()
+    end_date   = "2017/4/9"
 
     users = user_simulator(start_date,end_date,period=1,file_name="user_join_org_info_raw.csv")
-    users.to_csv("user_sim_" + "-".join(start_date.split("/")) + "_" + str(end_date.year) +"-" + str(end_date.month) + "-"+ str(end_date.day) + ".csv")
+    users.to_csv("user_sim_v2" + ".csv")
 
