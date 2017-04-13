@@ -76,8 +76,8 @@ def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavio
         overlap_per  = []
 
         for j in range( i + 1, periods):
-            cohort_init   = set(sample.loc[ ( sample["week_iso"] == i ) & ( sample["visits"] > 0 ) ]["user_id"])
-            cohort_return = set(sample.loc[ ( sample["week_iso"] == j ) & ( sample["visits"] > 0 ) ]["user_id"])
+            cohort_init   = set(sample[ ( sample["week_iso"] == i ) & ( sample["visits"] > 0 ) ]["user_id"])
+            cohort_return = set(sample[ ( sample["week_iso"] == j ) & ( sample["visits"] > 0 ) ]["user_id"])
 
             overlap_users = list(cohort_init & cohort_return)
 
@@ -114,16 +114,22 @@ if __name__ == "__main__":
     print("DON'T BE PANICK. DATA ARE PREPARED")
 
     WN = 10
+    t1 = time.time()
     report_per , report_users =  cohort_analysis(periods=WN,sample=result,number=False)
+    t2 = time.time()
+
+    print(t2 - t1)
+
+    for line in report_per:
+        s = ""
+        for j in line:
+            s += str(j) + "% "
+        print(s)
 
 
-    behavioral_data.to_csv("./0412_result/user_behavior.csv")
-    users.to_csv("./0412_result/user_sim.csv")
-    result.to_csv("./0412_result/result.csv")
-
-
-    print("FUCK ! I AM DONE OF IT")
-
-
-
-
+    # behavioral_data.to_csv("./0412_result/user_behavior.csv")
+    # users.to_csv("./0412_result/user_sim.csv")
+    # result.to_csv("./0412_result/result.csv")
+    #
+    #
+    # print("FUCK ! I AM DONE OF IT")
