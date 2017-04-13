@@ -53,7 +53,7 @@ def behavior_data_generator(files=[],key=[]):
             dfs.append(pd.read_csv(files[file_i], encoding="utf-16", sep="\t", dtype={"user":str},names=df_names,header=0,parse_dates=['Date'],infer_datetime_format=True))
 
     result = reduce(lambda left, right: pd.merge(left, right, how="left", on=["user", "Date"]), dfs).fillna(0)
-    result["avg_duration"] = [ secs_convertor(d) for d in result["avg_duration"] ]
+    result["avg_duration"] = result["avg_duration"].map(lambda time : secs_convertor(time))
     return result
 
 def user_generator(sim_user_filter=None,user_org_filter=None):
