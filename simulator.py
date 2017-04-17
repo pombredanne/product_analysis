@@ -30,7 +30,7 @@ def user_simulator(start_date=None,end_date=None,period=None,file_name=None):
                             parse_dates=["min_day_user_join_org", "update_date"], dtype={"user_id":str}).drop_duplicates("user_id")
 
     result = pd.merge(users_df, user_info_df, how="left", on="user_id")
-    result["week_iso"] = [ d.isocalendar()[1] for d in result["sim_date"] ]
+    result["week_iso"] = result["sim_date"].map(lambda time : time.isocalendar()[1])
 
 
     return result.loc[result["sim_date"] >= result["min_day_user_join_org"]]
