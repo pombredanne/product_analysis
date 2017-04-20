@@ -13,11 +13,15 @@ def aggregate_to_week(source=pd.DataFrame, dims=[],columns=[]):
     return source.groupby(dims)[columns].aggregate(np.sum).reset_index()
 
 def fcf_calculator(source=pd.DataFrame):
-
     source["fcf_short"]  = source["net_income"] + source["capital_expenditure"]
     source["fcf_middle"] = source["net_income"] + np.cumsum(source["capital_expenditure"])
     source["fcf_long"]   = np.cumsum(source["net_income"]) + np.cumsum(source["capital_expenditure"])
+
+    tmp = np.cumsum(source["capital_expenditure"])
     source["fcf_middle_rolling_4w"] = source["net_income"] + source["capital_expenditure"].rolling(4).sum().fillna(0)
+
+    for i in range(4):
+        source.set_value(i,"fcf_middle_rolling_4w", source["net_income"][i] + tmp[i])
 
     return source
 
