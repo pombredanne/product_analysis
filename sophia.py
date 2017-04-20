@@ -10,13 +10,14 @@ def user_summaries(users=pd.DataFrame,summary_key=""):
     return users.groupby(summary_key)["user_id"].apply(set).apply(len)
 
 def aggregate_to_week(source=pd.DataFrame, dims=[],columns=[]):
-    return source.groupby(dims)[columns].aggregate(np.sum)
+    return source.groupby(dims)[columns].aggregate(np.sum).reset_index()
 
 def fcf_calculator(source=pd.DataFrame):
 
     source["fcf_short"]  = source["net_income"] + source["capital_expenditure"]
     source["fcf_middle"] = source["net_income"] + np.cumsum(source["capital_expenditure"])
     source["fcf_long"]   = np.cumsum(source["net_income"]) + np.cumsum(source["capital_expenditure"])
+    source["fcf_middle_rolling_4w"] = source["net_income"] + source["capital_expenditure"].rolling(4).sum().fillna(0)
 
     return source
 
@@ -33,10 +34,11 @@ if __name__ == "__main__":
 
     result_by_week = aggregate_to_week(source=result,dims=["week_iso"],columns=get_metrics_columns_name())
 
+
     source = fcf_calculator(result_by_week)
 
 
-    print(source[["fcf_short","fcf_middle","fcf_long"]])
+    print(source[["fcf_short","fcf_middle","fcf_long","fcf_middle_rolling_4w"]])
 
 
     print("Done")
