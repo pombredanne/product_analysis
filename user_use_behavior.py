@@ -73,7 +73,7 @@ def behavior_data_generator(files=[],key=[]):
 
     result["analytics_dashboard"] = result["dashboard_all_pv"]-result["realtime_pv"]-result["create_dashboard_pv"]-result["edit_dashboard_pv"]-result["dashboard_list_pv"]
 
-    result["visual_analytic"] = result["single_diagram_view"] + result["funnel_report_view"] + result["analytics_dashboard"]
+    result["visual_analytic"] = result["single_diagram_view"] + result["funnel_report_view"] + result["analytics_dashboard"] + result["retention_all_pv"]
     result["net_income"] = result["visual_analytic"]
     result["capital_expenditure"] = -1 * result["consumption_pv_sum"]
 
@@ -148,6 +148,10 @@ def get_active_user(sample=pd.DataFrame):
 
 def get_casual_user(sample=pd.DataFrame):
     return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] == 0) & (sample["consumption_pv_sum"] == 0 )]
+
+def get_metrics_columns_name():
+    columns =  session_behavior + view_event + click_event + computed_fields
+    return columns
 
 
 if __name__ == "__main__":
