@@ -23,7 +23,7 @@ def user_simulator(start_date=None,end_date=None,period=None,file_name=None):
     else:
         pass
 
-    users_df = pd.DataFrame([ user_id for user_id in product(user_id_generator(1,60000),days_generator(start_date,end_date,period)) ],
+    users_df = pd.DataFrame([ user_id for user_id in product(user_id_generator(1,60000), days_generator(start_date,end_date,period)) ],
                             columns=["user_id","sim_date"])
 
     user_info_df = pd.read_csv(file_name, encoding="utf-8",
@@ -33,7 +33,7 @@ def user_simulator(start_date=None,end_date=None,period=None,file_name=None):
     result["week_iso"] = result["sim_date"].map(lambda time : time.isocalendar()[1])
 
 
-    return result.loc[result["sim_date"] >= result["min_day_user_join_org"]]
+    return result[result["sim_date"] >= result["min_day_user_join_org"]]
 
 
 if __name__ == "__main__":
