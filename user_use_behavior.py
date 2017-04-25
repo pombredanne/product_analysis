@@ -149,6 +149,10 @@ def get_active_user(sample=pd.DataFrame):
 def get_casual_user(sample=pd.DataFrame):
     return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] == 0) & (sample["consumption_pv_sum"] == 0 )]
 
+def get_login_user(sample=pd.DataFrame):
+    return sample[(sample["visits"] > 0)]
+
+
 def get_metrics_columns_name():
     columns =  session_behavior + view_event + click_event + computed_fields
     return columns
