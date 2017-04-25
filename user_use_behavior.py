@@ -80,9 +80,9 @@ def behavior_data_generator(files=[],key=[]):
 
     return result
 
-def user_generator(sim_user_filter=None,user_org_filter=None):
+def user_generator(sim_user_filter=None,user_org_filter=None,user_max_id=None ):
 
-    users_sim = user_simulator("2017/1/1","2017/4/9", period=1, file_name=sim_user_filter)
+    users_sim = user_simulator("2016/12/1","2017/4/24", period=1, file_name=sim_user_filter, user_max_id=user_max_id )
     user_org_info_df = pd.read_csv(user_org_filter, dtype="str")
 
     return pd.merge(users_sim, user_org_info_df, how="inner", on="user_id")
@@ -128,10 +128,10 @@ def get_tableau_raw_data(user_src=pd.DataFrame,behavior_src=pd.DataFrame):
 
     return result
 
-def get_tableau_raw_data_from_source(files=[]):
+def get_tableau_raw_data_from_source(files=[], user_max_id=None):
 
     behavioral_data = behavior_data_generator(files=files, key=["Date", "user"])
-    users = user_generator(sim_user_filter="user_join_org_info_raw.csv", user_org_filter="user_org_info.txt")
+    users = user_generator(sim_user_filter="user_join_org_info_raw.csv", user_org_filter="user_org_info.txt", user_max_id=user_max_id)
 
     columns = session_behavior + view_event + click_event + computed_fields
     result = pd.merge(users, behavioral_data, how="left", left_on=["user_id", "sim_date"], right_on=["user", "Date"])
@@ -155,13 +155,23 @@ def get_metrics_columns_name():
 
 
 if __name__ == "__main__":
-    gio_files = ["./0412/0101-0409 user_访问量&访问时长.csv",
-                 "./0412/0101-0409 FQY_主要功能数据_U_user_table_PV浏览类.csv",
-                 "./0412/0101-0409 FQY_主要功能数据_U_user_table_action交互类.csv"]
+    gio_files = ["./0424/user_访问量&访问时长.csv",
+                 "./0424/FQY_主要功能数据_U_user_table_PV浏览类.csv",
+                 "./0424/FQY_主要功能数据_U_user_table_action交互类.csv"]
 
-    result = get_tableau_raw_data_from_source(files=gio_files)
+    user_max_id = 64369
+
+
+    result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id)
+
+    result.to_csv("raw_data_0424.csv",encoding="utf-8")
+
     #
     # behavioral_data = behavior_data_generator(files=gio_files,key=["Date","user"])
+    #
+    # behavioral_data.to_csv("behavior_data.csv",encoding="utf-8")
+
+
     # users = user_generator(sim_user_filter="user_join_org_info_raw.csv",user_org_filter="user_org_info.txt")
     #
     # result = get_tableau_raw_data(user_src=users,behavior_src=behavioral_data)
