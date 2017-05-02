@@ -4,6 +4,7 @@ from dateutil import parser
 from itertools import product
 from datetime import datetime
 
+
 def days_generator(start_date=None,end_date=None,period=1):
     start = parser.parse(start_date)
     end   = parser.parse(end_date)
@@ -17,6 +18,8 @@ def user_id_generator(start_user_id=1,end_user_id=None):
 
 def user_simulator(start_date=None,end_date=None,period=None,file_name=None,user_max_id=None):
 
+    print("Start to simulate users")
+
     if type(end_date) != str or type(start_date) != str :
         end_date   = str(end_date)
         start_date = str(start_date)
@@ -27,13 +30,18 @@ def user_simulator(start_date=None,end_date=None,period=None,file_name=None,user
                             columns=["user_id","sim_date"])
 
     user_info_df = pd.read_csv(file_name, encoding="utf-8",
-                            parse_dates=["min_day_user_join_org", "update_date"], dtype={"user_id":str}).drop_duplicates("user_id")
+                            parse_dates=["org_created_at", "project_created_at", "first_date_of_getting_pv", "latest_date_of_getting_pv"], dtype={"user_id_project":str, "user_id_user":str, "user_id_organization" : str}).drop_duplicates("user_id_project")
 
-    result = pd.merge(users_df, user_info_df, how="left", on="user_id")
-    result["week_iso"] = result["sim_date"].map(lambda time : time.isocalendar()[1])
+    print("Start adding user information")
 
+    result = pd.merge(users_df, user_info_df, how="left", left_on=["user_id"], right_on=["user_id_project"])
+    result["year_iso"] = result["sim_date"].map(lambda time : time.isocalendar()[0])
+    result["week_iso"] = result["sim_date"].map(lambda time: time.isocalendar()[1])
+    result["weekday_iso"] = result["sim_date"].map(lambda time : time.isocalendar()[2])
 
-    return result[result["sim_date"] >= result["min_day_user_join_org"]]
+    print("Start remove non-exisit date of users ")
+
+    return result[result["sim_date"] >= result["org_created_at"]]
 
 
 if __name__ == "__main__":
@@ -43,6 +51,6 @@ if __name__ == "__main__":
     user_max_id = 64369
 
 
-    users = user_simulator(start_date,end_date,period=1,file_name="user_join_org_info_raw.csv",user_max_id=user_max_id)
+    users = user_simulator(start_date,end_date,period=1,file_name="./0502/user_org_info.csv",user_max_id=user_max_id)
     users.to_csv("user_sim_v2" + ".csv")
 

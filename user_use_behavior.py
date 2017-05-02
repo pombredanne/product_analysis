@@ -9,7 +9,8 @@ session_behavior = ["avg_duration","visits"]
 view_event = ["chart_all_pv","chart_list_pv","create_chart_pv","edit_chart_pv",
                   "dashboard_all_pv","create_dashboard_pv","edit_dashboard_pv","dashboard_list_pv",
                   "funnel_all_pv","retention_all_pv","user_details_pv","realtime_pv","heatmap_use_imp",
-                  "create_funnel_pv"]
+                  "create_funnel_pv","scene_list_pv","scene_all_pv"]
+
 click_event = ["dashboard_filter_clck","dashboard_usercohort_clck",
                       "dashboard_time_clck","dashboard_create_save_clck",
                       "dashboard_edit_update_clck",
@@ -20,21 +21,22 @@ click_event = ["dashboard_filter_clck","dashboard_usercohort_clck",
                       "funnel_Dimension_clck","funnel_time_clck",
                       "funnel_trend_clck","funnel_create_save_clck",
                       "retention_time_clck","retention_Dimension_clck",
-                      "retention_detail_behavior_clck"]
+                      "retention_detail_behavior_clck","scene_time_clck","scene_filter_clck","scene_usercohort_clck"]
+
 interactive_expl_sum_key = ["user_details_pv","retention_detail_behavior_clck",
 "funnel_time_clck","funnel_trend_clck","funnel_Dimension_clck",
 "chart_list_time_clck","chart_list_filter_clck","chart_detail_filter_clck",
 "chart_detail_time_clck","chart_detail_usercohort_clck",
 "heatmap_use_imp",
 "retention_time_clck","retention_Dimension_clck",
-"dashboard_usercohort_clck","dashboard_filter_clck","dashboard_time_clck"]
+"dashboard_usercohort_clck","dashboard_filter_clck","dashboard_time_clck","scene_time_clck","scene_filter_clck","scene_usercohort_clck"]
 
 computed_fields = ["consumption_pv_sum","interactive_action_sum",
                    "single_diagram_view","funnel_report_view",
                    "analytics_dashboard","visual_analytic","net_income","capital_expenditure"]
 
 
-behavior_names = [session_behavior,view_event,click_event]
+behavior_names = [session_behavior, view_event, click_event]
 
 def secs_convertor(time=None):
     try:
@@ -59,6 +61,7 @@ def behavior_data_generator(files=[],key=[]):
         dfs = []
         for file_i in range(len(files)):
             df_names =  key + behavior_names[file_i]
+            print("Start to parse file: " + files[file_i])
             dfs.append(pd.read_csv(files[file_i], encoding="utf-16", sep="\t", dtype={"user":str},names=df_names,header=0,parse_dates=['Date'],infer_datetime_format=True))
 
     result = reduce(lambda left, right: pd.merge(left, right, how="left", on=["user", "Date"]), dfs)
@@ -73,7 +76,7 @@ def behavior_data_generator(files=[],key=[]):
 
     result["analytics_dashboard"] = result["dashboard_all_pv"]-result["realtime_pv"]-result["create_dashboard_pv"]-result["edit_dashboard_pv"]-result["dashboard_list_pv"]
 
-    result["visual_analytic"] = result["single_diagram_view"] + result["funnel_report_view"] + result["analytics_dashboard"] + result["retention_all_pv"]
+    result["visual_analytic"] = result["single_diagram_view"] + result["funnel_report_view"] + result["analytics_dashboard"] + result["retention_all_pv"] + result["scene_all_pv"] - result["scene_list_pv"]
     result["net_income"] = result["visual_analytic"]
     result["capital_expenditure"] = -1 * result["consumption_pv_sum"]
 
@@ -82,10 +85,11 @@ def behavior_data_generator(files=[],key=[]):
 
 def user_generator(sim_user_filter=None,user_org_filter=None,user_max_id=None ):
 
-    users_sim = user_simulator("2016/12/1","2017/4/24", period=1, file_name=sim_user_filter, user_max_id=user_max_id )
-    user_org_info_df = pd.read_csv(user_org_filter, dtype="str")
+    users_sim = user_simulator("2016/12/1","2017/4/30", period=1, file_name=sim_user_filter, user_max_id=user_max_id )
+    # user_org_info_df = pd.read_csv(user_org_filter, dtype="str")
 
-    return pd.merge(users_sim, user_org_info_df, how="inner", on="user_id")
+    # return pd.merge(users_sim, user_org_info_df, how="inner", on="user_id")
+    return users_sim
 
 def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavior=None, number=True,need_user_id=False):
 
@@ -118,23 +122,33 @@ def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavio
     else:
         cohorts_obj = ( cohorts_num , cohorts_user )
 
+    print("Cohort Analysis Completed")
+
     return cohorts_obj
 
 def get_tableau_raw_data(user_src=pd.DataFrame,behavior_src=pd.DataFrame):
 
     columns = session_behavior + view_event + click_event + computed_fields
     result = pd.merge(user_src, behavior_src, how="left", left_on=["user_id", "sim_date"], right_on=["user", "Date"])
+
+    print("Behavior Data Completed")
     result[columns] = result[columns].fillna(0)
 
     return result
 
 def get_tableau_raw_data_from_source(files=[], user_max_id=None):
 
+
     behavioral_data = behavior_data_generator(files=files, key=["Date", "user"])
-    users = user_generator(sim_user_filter="user_join_org_info_raw.csv", user_org_filter="user_org_info.txt", user_max_id=user_max_id)
+    print("Behavior Data Generation Completed")
+
+    users = user_generator(sim_user_filter="./0502/user_org_info.csv", user_max_id=user_max_id)
+    print("User Data Generation Completed")
 
     columns = session_behavior + view_event + click_event + computed_fields
     result = pd.merge(users, behavioral_data, how="left", left_on=["user_id", "sim_date"], right_on=["user", "Date"])
+    print("Merging User Data and Behavior Data Completed")
+
     result[columns] = result[columns].fillna(0)
 
     return result
@@ -159,16 +173,18 @@ def get_metrics_columns_name():
 
 
 if __name__ == "__main__":
-    gio_files = ["./0424/user_访问量&访问时长.csv",
-                 "./0424/FQY_主要功能数据_U_user_table_PV浏览类.csv",
-                 "./0424/FQY_主要功能数据_U_user_table_action交互类.csv"]
+    gio_files = ["./0502/user_访问量&访问时长.csv",
+                 "./0502/FQY_主要功能数据_U_user_table_PV浏览类.csv",
+                 "./0502/FQY_主要功能数据_U_user_table_action交互类.csv"]
 
-    user_max_id = 64369
+    user_max_id = 65227
 
 
     result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id)
 
-    result.to_csv("raw_data_0424.csv",encoding="utf-8")
+    print("Complete generating raw data")
+
+    result.to_csv("./0502/raw_data_0502.csv",encoding="utf-8")
 
     #
     # behavioral_data = behavior_data_generator(files=gio_files,key=["Date","user"])
@@ -180,37 +196,37 @@ if __name__ == "__main__":
     #
     # result = get_tableau_raw_data(user_src=users,behavior_src=behavioral_data)
 
-    core_user   = get_core_user(result)
-    active_user = get_active_user(result)
-    casual_user = get_casual_user(result)
-
-
-    print("DON'T BE PANICK. DATA ARE PREPARED")
-
-    WN = 11
-    i = 0
-
-    for user in [ core_user , active_user, casual_user ]:
-
-        if i == 0:
-            print("Core User Retention Report")
-        elif i == 1:
-            print("Active User Retention Report")
-        else:
-            print("Casual User Retention Report")
-
-        report_per , report_users =  cohort_analysis(periods=WN,sample=user,number=False)
-
-        for line in report_per:
-            s = ""
-            for j in line:
-                s += str(j) + "% "
-            print(s)
-
-        i += 1
-
-        print("\n")
-
+    # core_user   = get_core_user(result)
+    # active_user = get_active_user(result)
+    # casual_user = get_casual_user(result)
+    #
+    #
+    # print("DON'T BE PANICK. DATA ARE PREPARED")
+    #
+    # WN = 11
+    # i = 0
+    #
+    # for user in [ core_user , active_user, casual_user ]:
+    #
+    #     if i == 0:
+    #         print("Core User Retention Report")
+    #     elif i == 1:
+    #         print("Active User Retention Report")
+    #     else:
+    #         print("Casual User Retention Report")
+    #
+    #     report_per , report_users =  cohort_analysis(periods=WN,sample=user,number=False)
+    #
+    #     for line in report_per:
+    #         s = ""
+    #         for j in line:
+    #             s += str(j) + "% "
+    #         print(s)
+    #
+    #     i += 1
+    #
+    #     print("\n")
+    #
 
 
     # behavioral_data.to_csv("./0412_result/user_behavior.csv")
