@@ -3,7 +3,7 @@ import numpy as np
 import math
 
 
-def sdk_company_analysis(df=pd.DataFrame, org_in_db=pd.DataFrame):
+def sdk_company_analysis(df=pd.DataFrame):
 
     nqa_proj = df[(df.first_date_of_getting_pv.isnull()) & (df["SDK_complete_click"] == 0)]
     qa_proj = df[(~df.first_date_of_getting_pv.isnull()) & (df["SDK_complete_click"] != 0)]
@@ -13,65 +13,62 @@ def sdk_company_analysis(df=pd.DataFrame, org_in_db=pd.DataFrame):
     print("Qualified Account : " + str(qa_num))
     print("None Qualified Account : " + str(nqa_num))
     print("Install Rate : " + str(round(qa_num / nqa_num, 3) * 100) + "%")
+    print("\n")
 
     nqau = set(qa_proj["user"])
     qau = set(nqa_proj["user"])
 
     print("Users in qualified account : " + str(len(qau)))
     print("Users in non qualified account : " + str(len(nqau)))
+    print("\n")
 
     avg_qau_org = len(qau) / qa_num
     avg_nqau_org = len(nqau) / nqa_num
 
     print("Avg users in QA : " + str(round(avg_qau_org, 2)))
     print("Avg users in NQA: " + str(round(avg_nqau_org, 2)))
+    print("\n")
 
+
+def funnel_report(sample=pd.DataFrame, steps=[]):
+
+    initial_users = set(sample["user"])
+    result = []
+    overlap_users = initial_users
+    for e in steps:
+        eu = sample[sample[e] > 0]["user"]
+        overlap_users = (set(overlap_users) & set(eu))
+        result.append(len(overlap_users))
+
+    for step_i in range(len(steps)):
+        print("Step " + str(step_i + 1) + " " + events[step_i] + " : " + str(result[step_i]))
+        if step_i < len(events) - 1:
+            cr = round(result[step_i + 1] / result[step_i], 3)* 100
+            print("Conversion Rate : " + str(cr) + "%")
+    print("\n")
 
 if __name__ == "__main__":
 
-    # file_name = "SDK选择平台-过去14天.csv"
-    # sdk_install_users = pd.read_csv(file_name, encoding="utf-16", sep="\t")
-
     behavior_file_name = "SDK 安装－数据源.csv"
     columns = ["date", "user", "page_source", "SDK_platform_view", "SDK_platform_click", "SDK_check_click", "SDK_complete_click"]
-    users_behaviors = pd.read_csv(behavior_file_name, encoding="utf-16", sep="\t", names=columns, header=0, dtype={"user":str})
+    users_behaviors = pd.read_csv(behavior_file_name, encoding="utf-16", sep="\t", names=columns, header=0, dtype={ "user" :str})
     users_behaviors = users_behaviors[~users_behaviors["user"].isnull()]
+    users_behaviors["page_source"] = users_behaviors["page_source"].map(lambda source: source.split("/")[-1])
 
     user_org_project_info = pd.read_csv("./user_org_project_info.csv", header=0, dtype={"user_id_project":str})
     users_in_march = pd.merge(users_behaviors, user_org_project_info, how="left", left_on=["user"], right_on=["user_id_project"])
+    print(users_in_march.groupby("page_source")["user"].agg("count").sort_values(ascending=False))
+
+
     sdk_company_analysis(users_in_march)
 
 
-
-    ## Funnel Analysis
-
-    # initial_users = users_behaviors["user"]
-    # all = []
-    # overlap_users = initial_users
-    # for e in events:
-    #     eu = users_behaviors[users_behaviors[e] > 0]["user"]
-    #     overlap_users = (set(overlap_users) & set(eu))
-    #     all.append(overlap_users)
+    # events = ["SDK_platform_view", "SDK_platform_click", "SDK_check_click", "SDK_complete_click"]
     #
-    # first_event = len(all[0])
-    # second_event = len(all[1])
-    # third_event = len(all[2])
+    # print("Project Non Activation Funnel")
+    # sample_con = (users_in_march.first_date_of_getting_pv.isnull()) & (users_in_march["SDK_complete_click"] == 0)
+    # funnel_report(sample=users_in_march[sample_con], steps=events)
     #
-    # print("conversion rate : " + str((third_event / first_event) * 100))
-    # print(first_event)
-    # print("conversion rate : " + str((second_event / first_event) * 100))
-    # print(second_event)
-    # print("conversion rate : " + str((third_event / second_event) * 100))
-    # print(third_event)
-
-
-
-
-
-
-
-
-
-
-
-
+    # print("Project Activation Funnel")
+    # sample_con = (~users_in_march.first_date_of_getting_pv.isnull()) & (users_in_march["SDK_complete_click"] > 0)
+    # funnel_report(sample=users_in_march[sample_con], steps=events)
