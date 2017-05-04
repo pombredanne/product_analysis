@@ -13,21 +13,17 @@ def sdk_page_source_analysis(df=pd.DataFrame):
     qualified_account_info.loc[:, "page_source_cat"] = [page.split("/")[-1] for page in qualified_account_info["page_source"]]
 
     qualified_account_info_pc = qualified_account_info.groupby("page_source_cat")["page_source_cat"].agg("count")
-    print(qualified_account_info_pc.sort_values(ascending=False))
+    # print(qualified_account_info_pc.sort_values(ascending=False))
 
     qualified_account_by_industry = qualified_account_info.groupby(["industry"])["org_name"].agg("count")
-    print(qualified_account_by_industry.sort_values(ascending=False))
+    # print(qualified_account_by_industry.sort_values(ascending=False))
 
     non_qualified_accounts = newdf[newdf.install_rate == 0].reset_index()
     non_qualified_accounts.columns = ["org_name", "SDK_platform_view", "SDK_complete_click", "install_rate"]
     non_qualified_accounts_info = pd.merge(df, non_qualified_accounts, how="inner", on=["org_name"])
 
     non_qualified_accounts_by_industry = non_qualified_accounts_info.groupby(["industry"])["org_name"].agg("count")
-    print(non_qualified_accounts_by_industry.sort_values(ascending=False))
-
-
-
-
+    # print(non_qualified_accounts_by_industry.sort_values(ascending=False))
 
 
 def sdk_company_analysis(df=pd.DataFrame, org_in_db=pd.DataFrame):
@@ -76,8 +72,6 @@ def sdk_company_analysis(df=pd.DataFrame, org_in_db=pd.DataFrame):
     print("Non-qualified Account Duplicate Rate : " + str(nq_duplicate_rate) + "%")
 
 
-
-
 if __name__ == "__main__":
 
     # file_name = "SDK选择平台-过去14天.csv"
@@ -92,8 +86,8 @@ if __name__ == "__main__":
     user_org_info = pd.read_csv(user_org_info_file, header=0)
     org_in_db =  user_org_info["org_name"].drop_duplicates()
 
-    sdk_page_source_analysis(users_behaviors)
-    # sdk_company_analysis(users_behaviors, org_in_db=org_in_db)
+    # sdk_page_source_analysis(users_behaviors)
+    sdk_company_analysis(users_behaviors, org_in_db=org_in_db)
 
     # users_ = users_behaviors[(users_behaviors.SDK_platform_view > 0) & (users_behaviors.SDK_check_click > 0)]
 
