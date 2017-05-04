@@ -41,8 +41,8 @@ def funnel_report(sample=pd.DataFrame, steps=[]):
         result.append(len(overlap_users))
 
     for step_i in range(len(steps)):
-        print("Step " + str(step_i + 1) + " " + events[step_i] + " : " + str(result[step_i]))
-        if step_i < len(events) - 1:
+        print("Step " + str(step_i + 1) + " " + steps[step_i] + " : " + str(result[step_i]))
+        if step_i < len(steps) - 1:
             cr = round(result[step_i + 1] / result[step_i], 3)* 100
             print("Conversion Rate : " + str(cr) + "%")
     print("\n")
