@@ -1,6 +1,4 @@
 import pandas as pd
-import numpy as np
-import math
 
 
 def sdk_company_analysis(df=pd.DataFrame):
@@ -10,6 +8,7 @@ def sdk_company_analysis(df=pd.DataFrame):
 
     qa_num = len(set(qa_proj["project_id"]) - (set(qa_proj["project_id"]) & set(nqa_proj["org_id_organization"])))
     nqa_num = len(set(nqa_proj["project_id"]))
+
     print("Qualified Account : " + str(qa_num))
     print("None Qualified Account : " + str(nqa_num))
     print("Install Rate : " + str(round(qa_num / nqa_num, 3) * 100) + "%")
@@ -22,11 +21,11 @@ def sdk_company_analysis(df=pd.DataFrame):
     print("Users in non qualified account : " + str(len(nqau)))
     print("\n")
 
-    avg_qau_org = len(qau) / qa_num
-    avg_nqau_org = len(nqau) / nqa_num
+    avg_qau_org = round(len(qau) / qa_num, 3)
+    avg_nqau_org = round(len(nqau) / nqa_num, 3)
 
-    print("Avg users in QA : " + str(round(avg_qau_org, 2)))
-    print("Avg users in NQA: " + str(round(avg_nqau_org, 2)))
+    print("Avg users in QA : " + str(round(avg_qau_org, 3)))
+    print("Avg users in NQA: " + str(round(avg_nqau_org, 3)))
     print("\n")
 
 
@@ -57,18 +56,15 @@ if __name__ == "__main__":
 
     user_org_project_info = pd.read_csv("./user_org_project_info.csv", header=0, dtype={"user_id_project":str})
     users_in_march = pd.merge(users_behaviors, user_org_project_info, how="left", left_on=["user"], right_on=["user_id_project"])
-    print(users_in_march.groupby("page_source")["user"].agg("count").sort_values(ascending=False))
-
-
     sdk_company_analysis(users_in_march)
+    # print(users_in_march.groupby("page_source")["user"].agg("count").sort_values(ascending=False))
 
+    events = ["SDK_platform_view", "SDK_platform_click", "SDK_check_click", "SDK_complete_click"]
 
-    # events = ["SDK_platform_view", "SDK_platform_click", "SDK_check_click", "SDK_complete_click"]
-    #
-    # print("Project Non Activation Funnel")
-    # sample_con = (users_in_march.first_date_of_getting_pv.isnull()) & (users_in_march["SDK_complete_click"] == 0)
-    # funnel_report(sample=users_in_march[sample_con], steps=events)
-    #
-    # print("Project Activation Funnel")
-    # sample_con = (~users_in_march.first_date_of_getting_pv.isnull()) & (users_in_march["SDK_complete_click"] > 0)
-    # funnel_report(sample=users_in_march[sample_con], steps=events)
+    print("Project Non Activation Funnel")
+    sample_con = (users_in_march.first_date_of_getting_pv.isnull()) & (users_in_march["SDK_complete_click"] == 0)
+    funnel_report(sample=users_in_march[sample_con], steps=events)
+
+    print("Project Activation Funnel")
+    sample_con = (~users_in_march.first_date_of_getting_pv.isnull()) & (users_in_march["SDK_complete_click"] > 0)
+    funnel_report(sample=users_in_march[sample_con], steps=events)
