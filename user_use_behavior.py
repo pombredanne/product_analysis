@@ -62,7 +62,7 @@ def behavior_data_generator(files=[],key=[]):
         for file_i in range(len(files)):
             df_names =  key + behavior_names[file_i]
             print("Start to parse file: " + files[file_i])
-            dfs.append(pd.read_csv(files[file_i], encoding="utf-16", sep="\t", dtype={"user":str},names=df_names,header=0,parse_dates=['Date'],infer_datetime_format=True))
+            dfs.append(pd.read_csv(files[file_i], encoding="utf-16", sep="\t", dtype={"user":str},names=df_names,header=0,parse_dates=['Date'],infer_datetime_format=True, low_memory=False))
 
     result = reduce(lambda left, right: pd.merge(left, right, how="left", on=["user", "Date"]), dfs)
     result = result.fillna(0)
@@ -84,7 +84,7 @@ def behavior_data_generator(files=[],key=[]):
     return result
 
 def user_generator(sim_user_filter=None,user_org_filter=None,user_max_id=None ):
-    return user_simulator("2016/12/1","2017/4/30", period=1, file_name=sim_user_filter, user_max_id=user_max_id )
+    return user_simulator("2016/12/1","2017/5/8", period=1, file_name=sim_user_filter, user_max_id=user_max_id )
 
 
 def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavior=None, number=True,need_user_id=False):
@@ -138,7 +138,7 @@ def get_tableau_raw_data_from_source(files=[], user_max_id=None):
     behavioral_data = behavior_data_generator(files=files, key=["Date", "user"])
     print("Behavior Data Generation Completed")
 
-    users = user_generator(sim_user_filter="./0502/user_org_project_info.csv", user_max_id=user_max_id)
+    users = user_generator(sim_user_filter="./0508/user_project_org_info.csv", user_max_id=user_max_id)
     print("User Data Generation Completed")
 
     columns = session_behavior + view_event + click_event + computed_fields
@@ -169,18 +169,18 @@ def get_metrics_columns_name():
 
 
 if __name__ == "__main__":
-    gio_files = ["./0502/user_访问量&访问时长.csv",
-                 "./0502/FQY_主要功能数据_U_user_table_PV浏览类.csv",
-                 "./0502/FQY_主要功能数据_U_user_table_action交互类.csv"]
+    gio_files = ["./0508/20161201-20170508_user_访问量&访问时长.csv",
+                 "./0508/20161201-20170508_FQY_主要功能数据_U_user_table_PV浏览类.csv",
+                 "./0508/20161201-20170508_FQY_主要功能数据_U_user_table_action交互类.csv"]
 
-    user_max_id = 65227
+    user_max_id = 66093
 
 
     result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id)
 
     print("Complete generating raw data")
 
-    result.to_csv("./0502/raw_data_0502.csv",encoding="utf-8")
+    result.to_csv("./0508/raw_data_0508.csv",encoding="utf-8")
 
     #
     # behavioral_data = behavior_data_generator(files=gio_files,key=["Date","user"])

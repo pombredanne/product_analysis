@@ -30,7 +30,9 @@ def user_simulator(start_date=None,end_date=None,period=None,file_name=None,user
                             columns=["user_id","sim_date"])
 
     user_info_df = pd.read_csv(file_name, encoding="utf-8",
-                            parse_dates=["org_created_at", "project_created_at", "first_date_of_getting_pv", "latest_date_of_getting_pv"], dtype={"user_id_project":str, "user_id_user":str, "user_id_organization" : str}).drop_duplicates("user_id_project")
+                            parse_dates=["org_created_at", "project_created_at", "first_date_of_getting_pv", "latest_date_of_getting_pv"],
+                               dtype={"user_id_project":str, "user_id_user":str, "user_id_organization" : str},
+                               low_memory=False).drop_duplicates("user_id_project")
 
     print("Start adding user information")
 
