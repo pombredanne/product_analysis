@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 def sdk_company_analysis(df=pd.DataFrame):
@@ -17,15 +19,15 @@ def sdk_company_analysis(df=pd.DataFrame):
     nqau = set(qa_proj["user"])
     qau = set(nqa_proj["user"])
 
-    print("Users in qualified account : " + str(len(qau)))
-    print("Users in non qualified account : " + str(len(nqau)))
+    print("Users in Activated Project : " + str(len(qau)))
+    print("Users in Non-Activated Project : " + str(len(nqau)))
     print("\n")
 
     avg_qau_org = round(len(qau) / qa_num, 3)
     avg_nqau_org = round(len(nqau) / nqa_num, 3)
 
-    print("Avg users in QA : " + str(round(avg_qau_org, 3)))
-    print("Avg users in NQA: " + str(round(avg_nqau_org, 3)))
+    print("Avg. Users in QA : " + str(round(avg_qau_org, 3)))
+    print("Avg. Users in NQA: " + str(round(avg_nqau_org, 3)))
     print("\n")
 
 
@@ -33,6 +35,7 @@ def funnel_report(sample=pd.DataFrame, steps=[]):
 
     initial_users = set(sample["user"])
     result = []
+
     overlap_users = initial_users
     for e in steps:
         eu = sample[sample[e] > 0]["user"]
@@ -44,17 +47,23 @@ def funnel_report(sample=pd.DataFrame, steps=[]):
         if step_i < len(steps) - 1:
             cr = round(result[step_i + 1] / result[step_i], 3)* 100
             print("Conversion Rate : " + str(cr) + "%")
+
+    pd.DataFrame({"users" : result}, index=np.arange(1, len(steps) +1, 1) ).plot.bar()
+
+    plt.show()
+
+
     print("\n")
 
 if __name__ == "__main__":
 
-    behavior_file_name = "SDK 安装－数据源.csv"
+    behavior_file_name = "./0502/SDK 安装－数据源.csv"
     columns = ["date", "user", "page_source", "SDK_platform_view", "SDK_platform_click", "SDK_check_click", "SDK_complete_click"]
     users_behaviors = pd.read_csv(behavior_file_name, encoding="utf-16", sep="\t", names=columns, header=0, dtype={ "user" :str})
     users_behaviors = users_behaviors[~users_behaviors["user"].isnull()]
     users_behaviors["page_source"] = users_behaviors["page_source"].map(lambda source: source.split("/")[-1])
 
-    user_org_project_info = pd.read_csv("./user_org_project_info.csv", header=0, dtype={"user_id_project":str})
+    user_org_project_info = pd.read_csv("./0502/user_org_project_info.csv", header=0, dtype={"user_id_project":str})
     users_in_march = pd.merge(users_behaviors, user_org_project_info, how="left", left_on=["user"], right_on=["user_id_project"])
     sdk_company_analysis(users_in_march)
     # print(users_in_march.groupby("page_source")["user"].agg("count").sort_values(ascending=False))

@@ -44,8 +44,6 @@ def project_activation_rate(right=pd.DataFrame, left=pd.DataFrame):
     project_week_a_r =  round( ( project_week_a / project_week ) * 100 , 2 )
     project_week_na_r = round( ( project_week_na / project_week ) * 100 , 2 )
 
-    print(project_week_a)
-
     project_week_a_r.plot(label="activation rate")
     project_week_na_r.plot(label="non activation rate")
 
@@ -54,8 +52,8 @@ def project_activation_rate(right=pd.DataFrame, left=pd.DataFrame):
     plt.show()
 
 if __name__ == "__main__":
-    file_name   = "user_all_information.csv"
-    event_created_file = "first_event_created.csv"
+    file_name   = "./0502/user_all_information.csv"
+    event_created_file = "./0502/first_event_created.csv"
 
 
     date_fields = ["org_created_at","project_created_at","first_date_of_getting_pv","latest_date_of_getting_pv"]
@@ -68,8 +66,8 @@ if __name__ == "__main__":
     event_created_df = event_created_df[event_created_df.project_id.notnull()]
     event_created_df.sort_values(["project_id"],inplace=True)
 
-    # project_activation_rate(right=user_all_info_df,left=event_created_df)
-    # non_activation_project(right=user_all_info_df, left=event_created_df)
+    project_activation_rate(right=user_all_info_df,left=event_created_df)
+    non_activation_project(right=user_all_info_df, left=event_created_df)
 
     activated_projects = pd.merge(user_all_info_df,event_created_df, how="inner", left_on=["project_id","user_id_project"], right_on=["project_id", "creator_id"])
     #

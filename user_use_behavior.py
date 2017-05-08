@@ -84,12 +84,8 @@ def behavior_data_generator(files=[],key=[]):
     return result
 
 def user_generator(sim_user_filter=None,user_org_filter=None,user_max_id=None ):
+    return user_simulator("2016/12/1","2017/4/30", period=1, file_name=sim_user_filter, user_max_id=user_max_id )
 
-    users_sim = user_simulator("2016/12/1","2017/4/30", period=1, file_name=sim_user_filter, user_max_id=user_max_id )
-    # user_org_info_df = pd.read_csv(user_org_filter, dtype="str")
-
-    # return pd.merge(users_sim, user_org_info_df, how="inner", on="user_id")
-    return users_sim
 
 def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavior=None, number=True,need_user_id=False):
 
@@ -111,7 +107,7 @@ def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavio
 
             overlap_tseries.append(overlap_users)
             overlap_num.append(len(overlap_users))
-            overlap_per.append(round(len(overlap_users)/len(cohort_init)*100,2) )
+            overlap_per.append(round(len(overlap_users)/len(cohort_init)*100, 2))
 
         cohorts_user.append(overlap_tseries)
         cohorts_num.append(overlap_num)
@@ -142,7 +138,7 @@ def get_tableau_raw_data_from_source(files=[], user_max_id=None):
     behavioral_data = behavior_data_generator(files=files, key=["Date", "user"])
     print("Behavior Data Generation Completed")
 
-    users = user_generator(sim_user_filter="./0502/user_org_info.csv", user_max_id=user_max_id)
+    users = user_generator(sim_user_filter="./0502/user_org_project_info.csv", user_max_id=user_max_id)
     print("User Data Generation Completed")
 
     columns = session_behavior + view_event + click_event + computed_fields
