@@ -4,6 +4,33 @@ import re
 import matplotlib.pyplot as plt
 
 
+def count_psql_array(exps=pd.Series):
+    return exps.map(lambda x: len(re.compile("{(.*?)}").findall(x)[0].split(",")))
+
+
+def psql_parser(exps=pd.Series):
+    return exps.map(lambda exp: list(re.compile("{(.*?)}").findall(exp)[0].split(",")))
+
+
+def chart_summary(sample=pd.DataFrame, das=pd.DataFrame):
+    cgrouped_date = sample.groupby(["year", "week"])["id"].agg("count").rename("chart")
+    dgrouped_date = das.groupby(["year", "week"])["id"].agg("count").rename("dashbaord")
+    re = pd.concat([cgrouped_date, dgrouped_date], axis=1)
+
+    re.plot()
+    plt.show()
+
+    charts_type = sample["chart_type"].drop_duplicates()
+    types = []
+    for type in charts_type:
+        types.append(sample[sample.chart_type == type].groupby(["year", "week"])["id"].agg("count").rename(type))
+
+    result = pd.concat(types, axis=1)
+    result.plot()
+    plt.show()
+
+
+
 def chart_type_summary(sample=pd.DataFrame):
     grouped_type = sample.groupby(["chart_type"])["id"].agg("count").rename("Charts")
     grouped_atype = sample[sample.status == "activated"].groupby(["chart_type"])["id"].agg("count").rename("Active Charts")
@@ -22,9 +49,9 @@ def dashboard_project_sum(sample=pd.DataFrame):
     print("Dashboard Summary")
     print(grouped_id.describe())
 
-    # grouped_yw = sample.groupby(["year", "week"])["id"].agg("count")
-    # grouped_yw.plot()
-    # plt.show()
+    grouped_yw = sample.groupby(["year", "week"])["id"].agg("count")
+    grouped_yw.plot()
+    plt.show()
 
 
 def sub_chart_sum(sample=pd.DataFrame, charts=pd.DataFrame, users=pd.DataFrame):
@@ -56,14 +83,22 @@ def sub_dashboard_sum(sample=pd.DataFrame, dashboard=pd.DataFrame, charts=pd.Dat
                        left_on=["subscribe_id"], right_on=["id"])
 
     dab_users = sub_dab.groupby("subscribe_id")["user_id"].agg("count")
-    print(dab_users.describe())
+    # print(dab_users.describe())
 
     sdab_project = sub_dab.groupby("project_id_x")["project_id_x"].agg("count").rename("shared")
     dashboard = dashboard[dashboard.status == "activated"]
     dab_project = dashboard.groupby("project_id")["project_id"].agg("count").rename("total")
 
     r = pd.concat([sdab_project.describe(), dab_project.describe()], axis=1)
-    print(r)
+    # print(r)
+
+    grouped_type = sample.groupby(["subscribe_type"])["id"].agg("count").rename("num")
+    grouped_type_all = np.sum(grouped_type)
+    grouped_type_per = (round(grouped_type*100 / grouped_type_all)).rename("per")
+    grouped_type_sum = pd.concat([grouped_type, grouped_type_per], axis=1)
+
+    print(grouped_type_sum)
+
 
 
 def dashboard_usage(sample=pd.DataFrame, charts=pd.DataFrame):
@@ -78,16 +113,8 @@ def dashboard_usage(sample=pd.DataFrame, charts=pd.DataFrame):
     d_sample = sample[sample.status == "deleted"].groupby(["year", "week"])["id"].agg("count")
     status_time = pd.concat([a_sample, d_sample], axis=1, keys=["activated", "deleted"]).fillna(0)
 
-    # status_time.plot()
-    # plt.show()
-
-
-def count_psql_array(exps=pd.Series):
-    return exps.map(lambda x: len(re.compile("{(.*?)}").findall(x)[0].split(",")))
-
-
-def psql_parser(exps=pd.Series):
-    return exps.map(lambda exp: list(re.compile("{(.*?)}").findall(exp)[0].split(",")))
+    status_time.plot()
+    plt.show()
 
 
 def dashboard_chart(sample=pd.DataFrame):
@@ -104,9 +131,7 @@ def dashboard_chart(sample=pd.DataFrame):
 
 def dashboard_chart2(sample=pd.DataFrame, charts=pd.DataFrame):
 
-    dsc = pd.DataFrame({"dashboard_id": sample["id"],
-                        "chart_ids": psql_parser(sample["chart_ids"])}
-                       )
+    dsc = pd.DataFrame({"dashboard_id": sample["id"], "chart_ids": psql_parser(sample["chart_ids"])})
     result = []
     for d_id in dsc["dashboard_id"].index:
         for chart_id in dsc["chart_ids"][d_id]:
@@ -132,20 +157,24 @@ def dashboard_chart2(sample=pd.DataFrame, charts=pd.DataFrame):
 if __name__ == "__main__":
     date_columns = ["created_at", "updated_at"]
 
-    charts = pd.read_csv("./charts.csv", low_memory=False)
-    dashboard = pd.read_csv("./dashboards.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
+    charts = pd.read_csv("./chart_dashboard/charts.csv", low_memory=False, parse_dates=["created_at"])
+    dashboard = pd.read_csv("./chart_dashboard/dashboards.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
     subs = pd.read_csv("./chart_dashboard/subscriptions.csv", low_memory=False)
-    users = pd.read_csv("./user_org_project_info.csv", low_memory=False)
+    users = pd.read_csv("./0502/user_org_project_info.csv", low_memory=False)
 
     dashboard = dashboard[~(dashboard.project_id == 3)]
-    charts = charts[~(charts.project_id == 3)]
     dashboard["year"] = dashboard["created_at"].map(lambda time: time.isocalendar()[0])
     dashboard["week"] = dashboard["created_at"].map(lambda time: time.isocalendar()[1])
 
+    charts = charts[~(charts.project_id == 3)]
+    charts["year"] = charts["created_at"].map(lambda time: time.isocalendar()[0])
+    charts["week"] = charts["created_at"].map(lambda time: time.isocalendar()[1])
+
     ndd = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())]
     # chart_type_summary(charts)
+    chart_summary(charts, ndd)
     # dashboard_project_sum(ndd)
     # dashboard_usage(ndd)
     # dashboard_chart2(ndd, charts=charts)
     # sub_chart_sum(subs, charts=charts, users=users)
-    sub_dashboard_sum(subs, dashboard=ndd, charts=charts)
+    # sub_dashboard_sum(subs, dashboard=ndd, charts=charts)
