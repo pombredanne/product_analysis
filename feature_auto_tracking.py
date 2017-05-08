@@ -73,11 +73,11 @@ def parse_metrics_exp(exp=str):
 
 def metrics_exp_sum(sample=pd.DataFrame):
    sample["exps_abt"] = sample["expression"].map(lambda exp: parse_metrics_exp(exp))
-   # com_metrics = sample[~(sample.exp_type == "normal")].groupby(["exps_abt"])["id"].agg("count").sort_values(ascending=False)
-   # print(com_metrics.head())
+   com_metrics = sample[~(sample.exp_type == "normal")].groupby(["exps_abt"])["id"].agg("count").sort_values(ascending=False)
+   print(com_metrics.head())
 
-   # metrics_type = sample.groupby(["exps_abt"])["id"].agg("count").sort_values(ascending=False)
-   # print(metrics_type.head())
+   metrics_type = sample.groupby(["exps_abt"])["id"].agg("count").sort_values(ascending=False)
+   print(metrics_type.head())
 
    c_grouped_p = sample[sample.exps_abt.isin(["clck"])].groupby(["project_id", "exps_abt"])["id"].agg("count").rename("clck")
    i_grouped_p = sample[sample.exps_abt.isin(["imp"])].groupby(["project_id", "exps_abt"])["id"].agg("count").rename("imp")

@@ -30,7 +30,6 @@ def chart_summary(sample=pd.DataFrame, das=pd.DataFrame):
     plt.show()
 
 
-
 def chart_type_summary(sample=pd.DataFrame):
     grouped_type = sample.groupby(["chart_type"])["id"].agg("count").rename("Charts")
     grouped_atype = sample[sample.status == "activated"].groupby(["chart_type"])["id"].agg("count").rename("Active Charts")
