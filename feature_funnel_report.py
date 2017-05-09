@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 
 def funnel_conversion_window(sample=pd.DataFrame):
     grouped = sample.groupby(["conversion_window"])["id"].agg("count")
-    print(grouped)
+    grouped.plot.bar()
+    plt.show()
 
 
 def funnel_timepicker(sample=pd.DataFrame):
@@ -13,7 +14,13 @@ def funnel_timepicker(sample=pd.DataFrame):
     picker_type_sum = sample.groupby(["picker_type"])["id"].agg("count").sort_values(ascending=False)
     grouped = sample.groupby(["year", "week", "picker_type"])["id"].agg("count")
 
-    #    # for typei in picker_type_sum.index:    #     grouped.xs(typei, level="picker_type").plot(label=typei)    #    # plt.legend()    # plt.show()
+    fig, axes = plt.subplots(nrows=1, ncols=2)
+    for typei in picker_type_sum.index:
+        grouped.xs(typei, level="picker_type").plot(label=typei)
+
+    picker_type_sum.plot(kind="pie", figsize=(6, 6), subplots=True, autopct='%.2f', fontsize=15, ax=axes[0])
+    plt.legend()
+    plt.show()
 
 def funnel_steps(sample=pd.DataFrame):
 
@@ -22,11 +29,15 @@ def funnel_steps(sample=pd.DataFrame):
     grouped_time = sample.groupby(["year", "week"])["steps_count"].agg([np.mean, np.median, np.std])
     grouped = sample.groupby(["year", "week", "steps_count"])["id"].agg("count")
 
+    fig, axes = plt.subplots(nrows=1, ncols=2)
     for typei in grouped_steps.index:
         grouped.xs(typei, level="steps_count").plot(label=typei)
 
+
+    grouped_steps.plot(kind="pie", figsize=(6, 6), subplots=True, autopct='%.2f', fontsize=15, ax=axes[0])
+
     plt.legend()
-    # grouped_steps.plot.bar()    # grouped_time.plot()    plt.show()
+    plt.show()
 
 
 def funnel_growth(sample=pd.DataFrame):
@@ -45,12 +56,14 @@ def funnel_growth(sample=pd.DataFrame):
 
 if __name__ == "__main__":
 
-    funnel_reports = pd.read_csv("project_funnel_report.csv", parse_dates=["created_at"])
+    funnel_reports = pd.read_csv("./chart_dashboard/funnels.csv", parse_dates=["created_at"])
 
     funnel_reports["year"] = funnel_reports["created_at"].map(lambda time: time.isocalendar()[0])
     funnel_reports["week"] = funnel_reports["created_at"].map(lambda time: time.isocalendar()[1])
     funnel_mean_week = funnel_reports.groupby(["year", "week"])[["id"]].agg("count").mean()
 
 
-    # funnel_growth(sample=funnel_reports)    # funnel_steps(sample=funnel_reports)    funnel_timepicker(sample=funnel_reports)
-    # funnel_conversion_window(sample=funnel_reports)
+    # funnel_growth(sample=funnel_reports)
+    # funnel_steps(sample=funnel_reports)
+    # funnel_timepicker(sample=funnel_reports)
+    funnel_conversion_window(sample=funnel_reports)

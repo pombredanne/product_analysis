@@ -12,16 +12,16 @@ def metrics_sum(sample=pd.DataFrame):
     print(grouped_ah_yw.describe())
     print(grouped_at_yw.describe())
 
+    fig, axes = plt.subplots(nrows=2, ncols=1)
     metrics_growth = pd.concat([grouped_at_yw, grouped_ah_yw, grouped_t_yw], axis=1)
-    metrics_growth.plot()
-    plt.show()
+    metrics_growth.plot(ax=axes[0]); axes[0].set_title('Metrics Growth');
 
     compx = sample[sample.exp_type == "complex"].groupby(["year", "week"])["id"].agg("count").rename("complex")
     compd = sample[sample.exp_type == "compound"].groupby(["year", "week"])["id"].agg("count").rename("compound")
-    # normal = sample[sample.exp_type == "normal"].groupby(["year", "week"])["id"].agg("count").rename("normal")
+    normal = sample[sample.exp_type == "normal"].groupby(["year", "week"])["id"].agg("count").rename("normal")
 
     metrics_growth2 = pd.concat([compx, compd], axis=1)
-    metrics_growth2.plot()
+    metrics_growth2.plot(ax=axes[1]); axes[1].set_title('Calculated Metrics Growth');
     plt.show()
 
 
@@ -72,12 +72,15 @@ def parse_metrics_exp(exp=str):
 
 
 def metrics_exp_sum(sample=pd.DataFrame):
+   fig, axes = plt.subplots(nrows=2, ncols=1)
    sample["exps_abt"] = sample["expression"].map(lambda exp: parse_metrics_exp(exp))
-   com_metrics = sample[~(sample.exp_type == "normal")].groupby(["exps_abt"])["id"].agg("count").sort_values(ascending=False)
-   print(com_metrics.head())
+   com_metrics = sample[sample.exp_type != "normal"].groupby(["exps_abt"])["id"].agg("count").sort_values(ascending=False)
+   com_metrics.head().plot.bar(title="Top 5 Calculated Event Combination", ax=axes[0])
 
    metrics_type = sample.groupby(["exps_abt"])["id"].agg("count").sort_values(ascending=False)
-   print(metrics_type.head())
+   metrics_type.head().plot.bar(title="Top 5 Event Type", ax=axes[1])
+   plt.show()
+
 
    c_grouped_p = sample[sample.exps_abt.isin(["clck"])].groupby(["project_id", "exps_abt"])["id"].agg("count").rename("clck")
    i_grouped_p = sample[sample.exps_abt.isin(["imp"])].groupby(["project_id", "exps_abt"])["id"].agg("count").rename("imp")

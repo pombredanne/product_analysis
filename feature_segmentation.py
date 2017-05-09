@@ -80,6 +80,6 @@ if __name__ == "__main__":
 
 
     # user_num_sum(sample=segmentation)
-    # seg_sum(sample=segmentation)
+    seg_sum(sample=segmentation)
     # cohort_con(sample=segmentation)
-    chort_snapshot(sample=segmentation)
+    # chort_snapshot(sample=segmentation)

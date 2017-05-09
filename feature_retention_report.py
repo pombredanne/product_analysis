@@ -18,33 +18,44 @@ def comp_parser(exps=str):
 def reten_sum(sample=pd.DataFrame):
 
     user_type_dic = {
-        "uv": "访问用户",
-        "nuv": "新访问用户",
-        "usv": "登入用户",
-        "nusv": "新登入用户"
+        "uv": "Unique Visitor",
+        "nuv": "New Unique Visitor",
+        "usv": "Unique Signup Visitor",
+        "nusv": "New Unique Signup Visitor"
     }
 
-    grouped_date = sample.groupby(["year", "week"])["id"].agg("count").rename("count")
-    print(grouped_date.describe())
+    grouped_date = sample.groupby(["year", "week"])["id"].agg("count").rename("Total")
+    agrouped_date = sample[sample.status == "activated"].groupby(["year", "week"])["id"].agg("count").rename("Activated")
+    nagrouped_date = sample[~(sample.status == "activated")].groupby(["year", "week"])["id"].agg("count").rename("Archived")
 
-    grouped_usert = sample.groupby(["user_type"])["id"].agg("count").rename("count").sort_values(ascending=False)
+    result = pd.concat([agrouped_date, nagrouped_date, grouped_date], axis=1)
+
+    # result.plot()
+    # plt.show()
+
+    fig, axes = plt.subplots(nrows=2, ncols=2)
+
+    grouped_usert = sample.groupby(["user_type"])["id"].agg("count").rename("User Type").sort_values(ascending=False)
     grouped_usert.index = grouped_usert.index.map(lambda type: user_type_dic[type])
-    print(grouped_usert)
+    grouped_usert.plot(ax=axes[0,0], kind='pie', figsize=(6, 6), subplots=True,  autopct='%.2f', fontsize=10, mark_right=False)
 
-    grouped_range = sample.groupby(["range"])["id"].agg("count").rename("count").sort_values(ascending=False)
-    print(grouped_range)
+
+    grouped_range = sample.groupby(["range"])["id"].agg("count").rename("Time Range").sort_values(ascending=False)
+    grouped_range.plot(ax=axes[0, 1], kind='pie', figsize=(6, 6), subplots=True, autopct='%.2f', fontsize=15)
 
     sample["time_range_i"] = sample["time_range"].map(lambda trange: range_parser(trange))
     grouped_tri = sample.groupby(["time_range_i"])["id"].agg("count")
-    print(grouped_tri.describe())
+
 
     grouped_scene =  sample.groupby(["scene"])["id"].agg("count").rename("count").sort_values(ascending=False)
-    print(grouped_scene)
+    grouped_scene.plot(ax=axes[1, 0], kind='pie', figsize=(6, 6), subplots=True, autopct='%.2f', fontsize=15)
 
     grouped_dim = sample.groupby(["compared_type"])["id"].agg("count").sort_values(ascending=False)
+    grouped_dim.plot(ax=axes[1, 1], kind='pie', figsize=(6, 6), subplots=True, autopct='%.2f', fontsize=15)
+
     stored_comp = sample[~sample.compared_map.isnull()]["compared_map"].map(lambda exps: comp_parser(exps))
-    print(stored_comp.describe())
-    # print(stored_comp)
+
+    plt.show()
 
 
 if __name__ == "__main__":

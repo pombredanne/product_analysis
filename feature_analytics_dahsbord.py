@@ -17,8 +17,9 @@ def chart_summary(sample=pd.DataFrame, das=pd.DataFrame):
     dgrouped_date = das.groupby(["year", "week"])["id"].agg("count").rename("dashbaord")
     re = pd.concat([cgrouped_date, dgrouped_date], axis=1)
 
-    re.plot()
-    plt.show()
+    fig, axes = plt.subplots(nrows=1, ncols=2)
+    re.plot(ax=axes[0]); axes[0].set_title('Usage', fontsize=15)
+
 
     charts_type = sample["chart_type"].drop_duplicates()
     types = []
@@ -26,7 +27,17 @@ def chart_summary(sample=pd.DataFrame, das=pd.DataFrame):
         types.append(sample[sample.chart_type == type].groupby(["year", "week"])["id"].agg("count").rename(type))
 
     result = pd.concat(types, axis=1)
-    result.plot()
+    result.plot(ax=axes[1]); axes[1].set_title('Charts Usage with Type', fontsize=15)
+    plt.show()
+
+    acharts = sample[sample.status == "activated"].groupby(["year", "week"])["id"].agg("count").rename("Activated")
+    nacharts = sample[~(sample.status == "activated")].groupby(["year", "week"])["id"].agg("count").rename("Charts")
+    nadshboard = das[~(das.status == "activated")].groupby(["year", "week"])["id"].agg("count").rename("Dashboard")
+
+    result = pd.concat([nacharts, nadshboard], axis=1).fillna(0)
+
+    pd.Series([round(np.sum(nadshboard) / (np.sum(nadshboard) + np.sum(nacharts)), 2),
+               round(np.sum(nacharts) / (np.sum(nadshboard) + np.sum(nacharts)), 2) ]).plot(kind="pie", figsize=(6, 6), subplots=True, autopct='%.2f', fontsize=20, labels=None, title=None)
     plt.show()
 
 
@@ -34,23 +45,32 @@ def chart_type_summary(sample=pd.DataFrame):
     grouped_type = sample.groupby(["chart_type"])["id"].agg("count").rename("Charts")
     grouped_atype = sample[sample.status == "activated"].groupby(["chart_type"])["id"].agg("count").rename("Active Charts")
     per = (round(grouped_atype*100 / grouped_type, 3)).rename("per")
-    summary = pd.concat([grouped_atype, grouped_type, per], axis=1)
-    print(summary.sort_values(by="per", ascending=False))
+
+    summary = pd.concat([grouped_atype, grouped_type, per], axis=1).sort_values(by="Active Charts", ascending=False)
+
+    fig, axes = plt.subplots(nrows=1, ncols=2)
+    summary[["Active Charts", "Charts"]].plot.bar(ax=axes[0]).set_title('Usage', fontsize=15)
+    percentage = (summary["Active Charts"] / np.sum( summary["Active Charts"]))
+    percentage.plot(kind='pie', figsize=(6, 6), subplots=True, labels=None)
+    print(percentage)
+    plt.show()
+
+    # print(summary.sort_values(by="per", ascending=False))
 
 
 def dashboard_project_sum(sample=pd.DataFrame):
     # sample = sample[sample["status"] == "activated"]
-    mean_m = sample["last_version_num"]
-    print("Modified Time")
-    print(mean_m.describe())
+    # mean_m = sample["last_version_num"]
+    # print("Modified Time")
+    # print(mean_m.describe())
 
     grouped_id = sample.groupby(["project_id"])["id"].agg("count")
     print("Dashboard Summary")
     print(grouped_id.describe())
 
-    grouped_yw = sample.groupby(["year", "week"])["id"].agg("count")
-    grouped_yw.plot()
-    plt.show()
+    # grouped_yw = sample.groupby(["year", "week"])["id"].agg("count")
+    # grouped_yw.plot()
+    # plt.show()
 
 
 def sub_chart_sum(sample=pd.DataFrame, charts=pd.DataFrame, users=pd.DataFrame):
@@ -61,7 +81,8 @@ def sub_chart_sum(sample=pd.DataFrame, charts=pd.DataFrame, users=pd.DataFrame):
     grouped_chatype = subd_charts.groupby(["chart_type"])["user_id"].agg("count")
     grouped_chatype_sum = grouped_chatype.rename("count").sort_values(ascending=False)
 
-    print(grouped_chatype_sum)
+    grouped_chatype_sum.plot.bar(title="Chart Type in Shared Dashboard")
+    plt.show()
 
     subd_charts = subd_charts.assign(metrics_num=count_psql_array(subd_charts["metrics"]))
     subd_charts_metrics = subd_charts.groupby(["chart_type"])[["metrics_num", "chart_type"]].agg({"metrics_num": np.sum, "chart_type": len})
@@ -82,28 +103,29 @@ def sub_dashboard_sum(sample=pd.DataFrame, dashboard=pd.DataFrame, charts=pd.Dat
                        left_on=["subscribe_id"], right_on=["id"])
 
     dab_users = sub_dab.groupby("subscribe_id")["user_id"].agg("count")
-    # print(dab_users.describe())
+    print(dab_users.describe())
 
     sdab_project = sub_dab.groupby("project_id_x")["project_id_x"].agg("count").rename("shared")
     dashboard = dashboard[dashboard.status == "activated"]
     dab_project = dashboard.groupby("project_id")["project_id"].agg("count").rename("total")
 
     r = pd.concat([sdab_project.describe(), dab_project.describe()], axis=1)
-    # print(r)
+    print(r)
 
     grouped_type = sample.groupby(["subscribe_type"])["id"].agg("count").rename("num")
     grouped_type_all = np.sum(grouped_type)
     grouped_type_per = (round(grouped_type*100 / grouped_type_all)).rename("per")
     grouped_type_sum = pd.concat([grouped_type, grouped_type_per], axis=1)
 
-    print(grouped_type_sum)
-
+    # print(grouped_type_sum)
+    grouped_type_sum["num"].plot(kind='pie', figsize=(6, 6), subplots=True,  autopct='%.2f', fontsize=20)
+    plt.show()
 
 
 def dashboard_usage(sample=pd.DataFrame, charts=pd.DataFrame):
 
     grouped_s = sample.groupby(["status"])["id"].agg("count")
-    percentage = round(grouped_s / np.sum(grouped_s), 3)
+    percentage = round(grouped_s*100 / np.sum(grouped_s), 3)
     status = pd.concat([grouped_s, percentage], axis=1, keys=["count", "percentage(%)"])
     print("Dashboard Status Summary : ")
     print(status)
@@ -150,7 +172,10 @@ def dashboard_chart2(sample=pd.DataFrame, charts=pd.DataFrame):
 
     chart_usages = pd.concat([da_chart, grouped_type], axis=1).rename(columns={"id": "total"}).sort_values(by="sum", ascending=False)
     chart_usages["lever"] = round(chart_usages["sum"]/chart_usages["total"], 3)
+
     print(chart_usages)
+    chart_usages[["sum", "total"]].rename(columns={"sum" : "Dashboard", "total": "DB"}).plot.bar()
+    plt.show()
 
 
 if __name__ == "__main__":
