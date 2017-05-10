@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import jieba
 
 
 def funnel_conversion_window(sample=pd.DataFrame):
@@ -53,10 +54,31 @@ def funnel_growth(sample=pd.DataFrame):
     plt.legend()
     plt.show()
 
+def funnel_name_sum(sample=pd.DataFrame):
+
+    jieba.enable_parallel(4)
+    print("Start to Tokenize")
+    name_tokenize = sample["name"].map(lambda name: jieba.cut_for_search(str(name).split("_")[0]))
+    print("Start to Flat Token")
+    total_token = [item for sug_list in name_tokenize for item in sug_list]
+    print("Start to Count Words")
+
+    word_dict = {}
+    for word in total_token:
+        if word in word_dict:
+            word_dict[word] += 1
+        else:
+            word_dict[word] = 1
+
+    wc = pd.DataFrame(list(word_dict.items()), columns=["word", "count"]).sort_values(by="count", ascending=False).set_index(["word"])
+    print("Start to Output Top 20 words")
+    wc[:20].to_csv("funnel_word_count.csv", encoding="utf-8")
+
 
 if __name__ == "__main__":
 
     funnel_reports = pd.read_csv("./chart_dashboard/funnels.csv", parse_dates=["created_at"])
+    funnel_reports = funnel_reports[funnel_reports.project_id != 3]
 
     funnel_reports["year"] = funnel_reports["created_at"].map(lambda time: time.isocalendar()[0])
     funnel_reports["week"] = funnel_reports["created_at"].map(lambda time: time.isocalendar()[1])
@@ -66,4 +88,6 @@ if __name__ == "__main__":
     # funnel_growth(sample=funnel_reports)
     # funnel_steps(sample=funnel_reports)
     # funnel_timepicker(sample=funnel_reports)
-    funnel_conversion_window(sample=funnel_reports)
+    # funnel_conversion_window(sample=funnel_reports)
+    funnel_name_sum(sample=funnel_reports)
+

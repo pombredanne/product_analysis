@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import re
 import matplotlib.pyplot as plt
+import jieba
 
 
 def count_psql_array(exps=pd.Series):
@@ -55,34 +56,34 @@ def chart_type_summary(sample=pd.DataFrame):
     print(percentage)
     plt.show()
 
-    # print(summary.sort_values(by="per", ascending=False))
+    print(summary.sort_values(by="per", ascending=False))
 
 
 def dashboard_project_sum(sample=pd.DataFrame):
-    # sample = sample[sample["status"] == "activated"]
-    # mean_m = sample["last_version_num"]
-    # print("Modified Time")
-    # print(mean_m.describe())
+    sample = sample[sample["status"] == "activated"]
+    mean_m = sample["last_version_num"]
+    print("Modified Time")
+    print(mean_m.describe())
 
     grouped_id = sample.groupby(["project_id"])["id"].agg("count")
     print("Dashboard Summary")
     print(grouped_id.describe())
 
-    # grouped_yw = sample.groupby(["year", "week"])["id"].agg("count")
-    # grouped_yw.plot()
-    # plt.show()
+    grouped_yw = sample.groupby(["year", "week"])["id"].agg("count")
+    grouped_yw.plot()
+    plt.show()
 
 
 def sub_chart_sum(sample=pd.DataFrame, charts=pd.DataFrame, users=pd.DataFrame):
     grouped_type = sample.groupby(["subscribe_type"])["user_id"].agg("count")
-    print(grouped_type)
-
     subd_charts = pd.merge(sample[sample.subscribe_type == "Chart"], charts[charts.status == "activated"], left_on=["subscribe_id"], right_on=["id"])
+
+    board_name_sum(sample=subd_charts)
+
     grouped_chatype = subd_charts.groupby(["chart_type"])["user_id"].agg("count")
     grouped_chatype_sum = grouped_chatype.rename("count").sort_values(ascending=False)
 
     grouped_chatype_sum.plot.bar(title="Chart Type in Shared Dashboard")
-    plt.show()
 
     subd_charts = subd_charts.assign(metrics_num=count_psql_array(subd_charts["metrics"]))
     subd_charts_metrics = subd_charts.groupby(["chart_type"])[["metrics_num", "chart_type"]].agg({"metrics_num": np.sum, "chart_type": len})
@@ -96,11 +97,29 @@ def sub_chart_sum(sample=pd.DataFrame, charts=pd.DataFrame, users=pd.DataFrame):
     result["network"] = round(result["coworker"] / result["admin"], 3)
     print(result)
 
+    num_shrad_charts = len(subd_charts["id_y"].drop_duplicates())
+    num_total_charts = len(charts["id"].drop_duplicates())
+    per_shared_charts = round(num_shrad_charts*100 / num_total_charts, 3)
+    per_nshared_charts =  round( (num_total_charts - num_shrad_charts)*100 / num_total_charts, 3 )
+
+    shared_per = pd.Series([per_shared_charts, per_nshared_charts], index=["Shared", "Not Shared"])
+    shared_per.plot(kind="pie", figsize=(6, 6), subplots=True, autopct='%.2f', fontsize=20)
+
+    plt.show()
+
 
 def sub_dashboard_sum(sample=pd.DataFrame, dashboard=pd.DataFrame, charts=pd.DataFrame):
 
     sub_dab = pd.merge(sample[sample.subscribe_type == "Dashboard"], dashboard[dashboard.status == "activated"],
                        left_on=["subscribe_id"], right_on=["id"])
+
+    num_shared_dasd = len(sub_dab["id_y"].drop_duplicates())
+    num_total_dasd = len(dashboard["id"].drop_duplicates())
+    per_shared_dasd = round(num_shared_dasd * 100 / num_total_dasd, 3)
+    per_nshared_dasd = round((num_total_dasd - num_shared_dasd) * 100 / num_total_dasd, 3)
+
+    shared_per = pd.Series([per_shared_dasd, per_nshared_dasd], index=["Shared", "Not Shared"])
+    shared_per.plot(kind="pie", figsize=(6, 6), subplots=True, autopct='%.2f', fontsize=20)
 
     dab_users = sub_dab.groupby("subscribe_id")["user_id"].agg("count")
     print(dab_users.describe())
@@ -178,6 +197,27 @@ def dashboard_chart2(sample=pd.DataFrame, charts=pd.DataFrame):
     plt.show()
 
 
+def board_name_sum(sample=pd.DataFrame):
+
+    jieba.enable_parallel(4)
+    print("Start to Tokenize")
+    name_tokenize = sample["name"].map(lambda name: jieba.cut_for_search(str(name).split("_")[0]))
+    print("Start to Flat Token")
+    total_token = [item for sug_list in name_tokenize for item in sug_list]
+    print("Start to Count Words")
+
+    word_dict = {}
+    for word in total_token:
+        if word in word_dict:
+            word_dict[word] += 1
+        else:
+            word_dict[word] = 1
+
+    wc = pd.DataFrame(list(word_dict.items()), columns=["word", "count"]).sort_values(by="count", ascending=False).set_index(["word"])
+    print("Start to Output Top 20 words")
+    wc[:20].to_csv("sub_dashboard_word_count.csv", encoding="utf-8")
+
+
 if __name__ == "__main__":
     date_columns = ["created_at", "updated_at"]
 
@@ -196,9 +236,10 @@ if __name__ == "__main__":
 
     ndd = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())]
     # chart_type_summary(charts)
-    chart_summary(charts, ndd)
+    # chart_summary(charts, ndd)
     # dashboard_project_sum(ndd)
     # dashboard_usage(ndd)
     # dashboard_chart2(ndd, charts=charts)
-    # sub_chart_sum(subs, charts=charts, users=users)
+    sub_chart_sum(subs, charts=charts, users=users)
     # sub_dashboard_sum(subs, dashboard=ndd, charts=charts)
+    # board_name_sum(sample=ndd)

@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import timedelta
 import matplotlib.pyplot as plt
-
+import jieba
 
 def range_parser(trange=str):
     time = trange.split(":")[1].split(",")
@@ -58,10 +58,32 @@ def reten_sum(sample=pd.DataFrame):
     plt.show()
 
 
+def retention_name_sum(sample=pd.DataFrame):
+
+    jieba.enable_parallel(4)
+    print("Start to Tokenize")
+    name_tokenize = sample["name"].map(lambda name: jieba.cut_for_search(str(name).split("_")[0]))
+    print("Start to Flat Token")
+    total_token = [item for sug_list in name_tokenize for item in sug_list]
+    print("Start to Count Words")
+
+    word_dict = {}
+    for word in total_token:
+        if word in word_dict:
+            word_dict[word] += 1
+        else:
+            word_dict[word] = 1
+
+    wc = pd.DataFrame(list(word_dict.items()), columns=["word", "count"]).sort_values(by="count", ascending=False).set_index(["word"])
+    print("Start to Output Top 20 words")
+    wc[:20].to_csv("retention_word_count.csv", encoding="utf-8")
+
 if __name__ == "__main__":
     retens = pd.read_csv("./db_export/retentions.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
+    retens = retens[retens.project_id != 3]
     retens = retens[(retens.status == "activated") & (retens.project_id != 3)]
     retens["year"] = retens["created_at"].map(lambda time: time.isocalendar()[0])
     retens["week"] = retens["created_at"].map(lambda time: time.isocalendar()[1])
 
-    reten_sum(sample=retens)
+    # reten_sum(sample=retens)
+    retention_name_sum(sample=retens)
