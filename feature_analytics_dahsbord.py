@@ -183,6 +183,9 @@ def dashboard_chart2(sample=pd.DataFrame, charts=pd.DataFrame):
     da_chart = pd.merge(da_chart, charts, how="left", left_on=["dashboard_id"], right_on=["id"])
     da_chart = da_chart[(da_chart.status_x == "activated") & (da_chart.status_y == "activated")]
 
+    grouped_did = da_chart.groupby(["dashboard_id"])["chart_id"].agg("count").describe()
+    print(grouped_did)
+
     project_chart_type = da_chart.groupby(["project_id_x"]).apply(lambda group: group.groupby(["chart_type"])["chart_id"].agg("count"))
     project_chart_sum = project_chart_type.reset_index().rename(columns={"project_id_x": "project_id", "chart_id": "count"})
 
@@ -239,7 +242,7 @@ if __name__ == "__main__":
     # chart_summary(charts, ndd)
     # dashboard_project_sum(ndd)
     # dashboard_usage(ndd)
-    # dashboard_chart2(ndd, charts=charts)
-    sub_chart_sum(subs, charts=charts, users=users)
+    dashboard_chart2(ndd, charts=charts)
+    # sub_chart_sum(subs, charts=charts, users=users)
     # sub_dashboard_sum(subs, dashboard=ndd, charts=charts)
     # board_name_sum(sample=ndd)
