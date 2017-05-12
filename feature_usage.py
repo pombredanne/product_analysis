@@ -2,7 +2,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def usage(c=pd.DataFrame, d=pd.DataFrame, f=pd.DataFrame, m=pd.DataFrame, s=pd.DataFrame, r=pd.DataFrame):
+def proddb_growth(c=pd.DataFrame, d=pd.DataFrame, f=pd.DataFrame, m=pd.DataFrame, s=pd.DataFrame, r=pd.DataFrame, pids=pd.DataFrame):
+
+    acgrouped = c[c.project_id.isin(pids)].groupby(["year", "week"])["id"].agg("count").rename("chart")
+    adgrouped = d[d.project_id.isin(pids)].groupby(["year", "week"])["id"].agg("count").rename("dashboard")
+    afgrouped = f[f.project_id.isin(pids)].groupby(["year", "week"])["id"].agg("count").rename("funnel")
+    argrouped = r[r.project_id.isin(pids)].groupby(["year", "week"])["id"].agg("count").rename("retention")
+    amgrouped = m[m.project_id.isin(pids)].groupby(["year", "week"])["id"].agg("count").rename("metric")
+    asgrouped = s[s.project_id.isin(pids)].groupby(["year", "week"])["id"].agg("count").rename("segmentation")
 
     cgrouped = c.groupby(["year", "week"])["id"].agg("count").rename("chart")
     dgrouped = d.groupby(["year", "week"])["id"].agg("count").rename("dashboard")
@@ -11,17 +18,36 @@ def usage(c=pd.DataFrame, d=pd.DataFrame, f=pd.DataFrame, m=pd.DataFrame, s=pd.D
     mgrouped = m.groupby(["year", "week"])["id"].agg("count").rename("metric")
     sgrouped = s.groupby(["year", "week"])["id"].agg("count").rename("segmentation")
 
+    fig, axes = plt.subplots(nrows=1, ncols=2)
     result = pd.concat([cgrouped, dgrouped, fgrouped, rgrouped, mgrouped, sgrouped], axis=1)
-    result.plot()
-
-    # fig, axes = plt.subplots(nrows=2, ncols=2)
-    # result['chart'].plot(ax=axes[0, 0], color="b"); axes[0, 0].set_title('Chart', fontsize=15)
-    # result['dashboard'].plot(ax=axes[0, 1], color="r"); axes[0, 1].set_title('Dashboard', fontsize=15)
-    # result['funnel'].plot(ax=axes[1, 0], color="g"); axes[1, 0].set_title('Funnel', fontsize=15)
-    # result['retention'].plot(ax=axes[1, 1], color="k"); axes[1, 1].set_title('Retention', fontsize=15)
-
+    aresult = pd.concat([acgrouped, adgrouped, afgrouped, argrouped, amgrouped, asgrouped], axis=1)
+    result.plot(ax=axes[0]); axes[0].set_title("Feature Growth in DB", fontsize=15)
+    aresult.plot(ax=axes[1]); axes[1].set_title("Feature Growth in Activated Project")
     plt.show()
 
+
+def feature_growth(c=pd.DataFrame, d=pd.DataFrame, f=pd.DataFrame, r=pd.DataFrame, pids=pd.DataFrame):
+
+    acgrouped = c[c.project_id.isin(pids)].groupby(["year", "week"])["id"].agg("count").rename("Activated Project")
+    adgrouped = d[d.project_id.isin(pids)].groupby(["year", "week"])["id"].agg("count").rename("Activated Project")
+    afgrouped = f[f.project_id.isin(pids)].groupby(["year", "week"])["id"].agg("count").rename("Activated Project")
+    argrouped = r[r.project_id.isin(pids)].groupby(["year", "week"])["id"].agg("count").rename("Activated Project")
+
+    cgrouped = c.groupby(["year", "week"])["id"].agg("count").rename("Project")
+    dgrouped = d.groupby(["year", "week"])["id"].agg("count").rename("Project")
+    fgrouped = f.groupby(["year", "week"])["id"].agg("count").rename("Project")
+    rgrouped = r.groupby(["year", "week"])["id"].agg("count").rename("Project")
+
+    charts = pd.concat([acgrouped, cgrouped], axis=1)
+    dashboards = pd.concat([adgrouped, dgrouped], axis=1)
+    funnels = pd.concat([afgrouped, fgrouped], axis=1)
+    retentions = pd.concat([argrouped, rgrouped], axis=1)
+
+    charts.plot(title="Chart")
+    dashboards.plot(title="Dashboard")
+    funnels.plot(title="Funnel Report")
+    retentions.plot(title="Retention Report")
+    plt.show()
 
 
 def raw_prepare(sample=pd.DataFrame):
@@ -32,12 +58,17 @@ def raw_prepare(sample=pd.DataFrame):
 
 
 if __name__ == "__main__":
+    projects = pd.read_csv("./0508/user_project_org_info.csv", low_memory=False)
+    aproject_ids = projects[~(projects.first_date_of_getting_pv.isnull()) ]["project_id"].drop_duplicates()
+
+    print(projects[~(projects.first_date_of_getting_pv.isnull()) ]["org_name"])
 
     charts = pd.read_csv("./chart_dashboard/charts.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
     charts = raw_prepare(charts)
 
     dashboards = pd.read_csv("./chart_dashboard/dashboards.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
     dashboards = raw_prepare(dashboards)
+    dashboards = dashboards[~(dashboards.status == "hidden") & ~(dashboards.type == "realtime") & ~(dashboards.chart_ids.isnull())]
 
     funnels = pd.read_csv("./chart_dashboard/funnels.csv", low_memory=False, parse_dates=["created_at"])
     funnels = raw_prepare(funnels)
@@ -51,7 +82,8 @@ if __name__ == "__main__":
     segmentations = pd.read_csv("./db_export/segmentations.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
     segmentations = raw_prepare(segmentations)
 
-    usage(c=charts, d=dashboards, f=funnels, r=retentions, m=metrics, s=segmentations)
+    proddb_growth(c=charts, d=dashboards, f=funnels, r=retentions, m=metrics, s=segmentations, pids=aproject_ids)
+    feature_growth(c=charts, d=dashboards, f=funnels, r=retentions, pids=aproject_ids)
 
 
 
