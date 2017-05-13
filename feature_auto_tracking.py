@@ -7,23 +7,37 @@ from raw_process import raw_prepare
 
 
 def metrics_sum(sample=pd.DataFrame):
-    grouped_t_yw = sample.groupby(["year", "week"])["id"].agg("count").rename("total")
-    grouped_ah_yw = sample[~(sample.status == "activated")].groupby(["year", "week"])["id"].agg("count").rename("archived")
-    grouped_at_yw = sample[sample.status == "activated"].groupby(["year", "week"])["id"].agg("count").rename("activated")
+    # grouped_t_yw = sample.groupby(["year", "week"])["id"].agg("count").rename("total")
+    # grouped_ah_yw = sample[~(sample.status == "activated")].groupby(["year", "week"])["id"].agg("count").rename("archived")
+    # grouped_at_yw = sample[sample.status == "activated"].groupby(["year", "week"])["id"].agg("count").rename("activated")
+    #
+    # print(grouped_ah_yw.describe())
+    # print(grouped_at_yw.describe())
+    #
+    # fig, axes = plt.subplots(nrows=2, ncols=1)
+    # metrics_growth = pd.concat([grouped_at_yw, grouped_ah_yw, grouped_t_yw], axis=1)
+    # metrics_growth.plot(ax=axes[0]); axes[0].set_title('Metrics Growth');
+    #
+    # compx = sample[sample.exp_type == "complex"].groupby(["year", "week"])["id"].agg("count").rename("complex")
+    # compd = sample[sample.exp_type == "compound"].groupby(["year", "week"])["id"].agg("count").rename("compound")
+    # normal = sample[sample.exp_type == "normal"].groupby(["year", "week"])["id"].agg("count").rename("normal")
+    #
+    # metrics_growth2 = pd.concat([compx, compd], axis=1)
+    # metrics_growth2.plot(ax=axes[1]); axes[1].set_title('Calculated Metrics Growth');
+    # plt.show()
 
-    print(grouped_ah_yw.describe())
-    print(grouped_at_yw.describe())
+    grouped_yw = sample.groupby(["year", "week"])["id"].agg("count").rename("total")
+    agrouped_yw = sample[sample.astatus == "alive"].groupby(["year", "week"])["id"].agg("count").rename("Alive")
+    dgrouped_yw = sample[sample.astatus != "alive"].groupby(["year", "week"])["id"].agg("count").rename("Dead")
 
-    fig, axes = plt.subplots(nrows=2, ncols=1)
-    metrics_growth = pd.concat([grouped_at_yw, grouped_ah_yw, grouped_t_yw], axis=1)
-    metrics_growth.plot(ax=axes[0]); axes[0].set_title('Metrics Growth');
+    fig, axes = plt.subplots(nrows=1, ncols=2)
+    trending = pd.concat([grouped_yw, agrouped_yw, dgrouped_yw], axis=1).fillna(0)
+    trending.plot(ax=axes[0]); axes[0].set_title("Metric Over Time")
 
-    compx = sample[sample.exp_type == "complex"].groupby(["year", "week"])["id"].agg("count").rename("complex")
-    compd = sample[sample.exp_type == "compound"].groupby(["year", "week"])["id"].agg("count").rename("compound")
-    normal = sample[sample.exp_type == "normal"].groupby(["year", "week"])["id"].agg("count").rename("normal")
+    share = pd.Series([ round(len(agrouped_yw)*100/len(grouped_yw), 3),  round(len(dgrouped_yw)*100/ len(grouped_yw), 3)], index=["Alive", "Dead"])
+    share.plot(kind="pie",ax=axes[1], figsize=(6, 6), subplots=True, fontsize=15, ); axes[1].set_title("Share of Status"); axes[1].set_ylabel("")
+    print(share)
 
-    metrics_growth2 = pd.concat([compx, compd], axis=1)
-    metrics_growth2.plot(ax=axes[1]); axes[1].set_title('Calculated Metrics Growth');
     plt.show()
 
 
@@ -138,14 +152,16 @@ def get_metrics_intfo():
 
 if __name__ == "__main__":
 
-    # metrics = pd.read_csv("./db_export/metrics.csv", low_memory=False, error_bad_lines=False, parse_dates=["created_at", "updated_at"])
-    #
-    # metrics = raw_prepare(metrics)
-    # metrics["exp_type"] = metrics["flatten_expression"].map(lambda exp: metrics_type(exp=exp))
+    metrics = pd.read_csv("./db_export/metrics.csv", low_memory=False, error_bad_lines=False, parse_dates=["created_at", "updated_at"])
+    metric_event_rule = pd.read_csv("./db_export/growing_metrics_event_rule.csv", low_memory=False)
+    nouse = pd.read_csv("./db_export/nouse_metrics_rule_id.csv", low_memory=False)
 
-    print(get_metrics_intfo())
+    nouse_metric_ids = pd.merge(nouse, metric_event_rule, how="left", left_on=["rules_id"], right_on=["rule_id"])["metric_id"].drop_duplicates().sort_values()
+    metrics = raw_prepare(metrics)
+    metrics["exp_type"] = metrics["flatten_expression"].map(lambda exp: metrics_type(exp=exp))
+    metrics["astatus"] = metrics["id"].map(lambda id: "dead" if id in nouse_metric_ids else "alive")
 
-    # metrics_sum(sample=metrics)
+    metrics_sum(sample=metrics)
     # metrics_flexp_sum(sample=metrics)
     # archive_periods(sample=metrics)
     # metrics_exp_sum(sample=metrics)
