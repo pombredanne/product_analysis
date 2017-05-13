@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 import jieba
+from raw_process import raw_prepare
 
 
 def metrics_sum(sample=pd.DataFrame):
@@ -115,13 +116,12 @@ def metrics_name_sum(sample=pd.DataFrame):
 if __name__ == "__main__":
 
     metrics = pd.read_csv("./db_export/metrics.csv", low_memory=False, error_bad_lines=False, parse_dates=["created_at", "updated_at"])
-    metrics = metrics[~(metrics.project_id <= 3)]
-    metrics["exp_type"] = metrics["flatten_expression"].map(lambda exp: metrics_type(exp=exp))
-    metrics["year"] = metrics["created_at"].map(lambda time: time.isocalendar()[0])
-    metrics["week"] = metrics["created_at"].map(lambda time: time.isocalendar()[1])
 
-    # metrics_sum(sample=metrics)
+    metrics = raw_prepare(metrics)
+    metrics["exp_type"] = metrics["flatten_expression"].map(lambda exp: metrics_type(exp=exp))
+
+    metrics_sum(sample=metrics)
     # metrics_flexp_sum(sample=metrics)
     # archive_periods(sample=metrics)
     # metrics_exp_sum(sample=metrics)
-    metrics_name_sum(sample=metrics)
+    # metrics_name_sum(sample=metrics)

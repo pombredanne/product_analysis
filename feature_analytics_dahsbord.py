@@ -3,6 +3,7 @@ import numpy as np
 import re
 import matplotlib.pyplot as plt
 import jieba
+from raw_process import raw_prepare
 
 
 def count_psql_array(exps=pd.Series):
@@ -291,13 +292,11 @@ if __name__ == "__main__":
     subs = pd.read_csv("./chart_dashboard/subscriptions.csv", low_memory=False)
     users = pd.read_csv("./0502/user_org_project_info.csv", low_memory=False)
 
-    dashboard = dashboard[~(dashboard.project_id == 3) & (dashboard.project_id.isin(aproject_ids))]
-    dashboard["year"] = dashboard["created_at"].map(lambda time: time.isocalendar()[0])
-    dashboard["week"] = dashboard["created_at"].map(lambda time: time.isocalendar()[1])
+    dashboard = raw_prepare(dashboard)
+    dashboard = dashboard[dashboard.project_id.isin(aproject_ids)]
 
-    charts = charts[~(charts.project_id == 3) & (charts.project_id.isin(aproject_ids))]
-    charts["year"] = charts["created_at"].map(lambda time: time.isocalendar()[0])
-    charts["week"] = charts["created_at"].map(lambda time: time.isocalendar()[1])
+    charts = raw_prepare(charts)
+    charts = charts[charts.project_id.isin(aproject_ids)]
 
     ndd = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())]
     # chart_type_summary(charts)
