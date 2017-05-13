@@ -1,9 +1,9 @@
 import pandas as pd
+import matplotlib.pyplot as plt
 import numpy as np
 from functools import reduce
 from simulator import user_simulator
 import  re
-import time
 
 session_behavior = ["avg_duration","visits"]
 view_event = ["chart_all_pv","chart_list_pv","create_chart_pv","edit_chart_pv",
@@ -62,7 +62,7 @@ def behavior_data_generator(files=[],key=[]):
         for file_i in range(len(files)):
             df_names =  key + behavior_names[file_i]
             print("Start to parse file: " + files[file_i])
-            dfs.append(pd.read_csv(files[file_i], encoding="utf-16", sep="\t", dtype={"user":str},names=df_names,header=0,parse_dates=['Date'],infer_datetime_format=True, low_memory=False))
+            dfs.append(pd.read_csv(files[file_i], encoding="utf-16", sep="\t", dtype={"user":str}, names=df_names,header=0,parse_dates=['Date'],infer_datetime_format=True, low_memory=False))
 
     result = reduce(lambda left, right: pd.merge(left, right, how="left", on=["user", "Date"]), dfs)
     result = result.fillna(0)
@@ -178,9 +178,29 @@ if __name__ == "__main__":
 
     result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id)
 
-    print("Complete generating raw data")
+    result["weekday"] =  result["sim_date"].map(lambda time: time.isoweekday())
 
-    result.to_csv("./0508/raw_data_0508.csv",encoding="utf-8")
+
+    dashboard = result[result["analytics_dashboard"] > 0].groupby(["weekday"])["user_id_project"].agg("count")
+    chart = result[result["single_diagram_view"] > 0].groupby(["weekday"])["user_id_project"].agg("count")
+    funnel = result[result["funnel_report_view"] > 0].groupby(["weekday"])["user_id_project"].agg("count")
+    retention = result[result["retention_all_pv"] > 0].groupby(["weekday"])["user_id_project"].agg("count")
+    inter = result[result["interactive_action_sum"] > 0].groupby(["weekday"])["user_id_project"].agg("count")
+    visual = result[result["visual_analytic"] > 0].groupby(["weekday"])["user_id_project"].agg("count")
+
+    fig, axes = plt.subplots(nrows=2, ncols=3)
+    dashboard.plot(ax=axes[0, 0]); axes[0, 0].set_title("Dashboard", fontsize=15)
+    chart.plot(ax=axes[0, 1]); axes[0, 1].set_title("Chart", fontsize=15)
+    visual.plot(ax=axes[0,2]); axes[0, 2].set_title("Visual Analytics", fontsize=15)
+    retention.plot(ax=axes[1,0]); axes[1, 0].set_title("Retention", fontsize=15)
+    inter.plot(ax=axes[1,1]); axes[1, 1].set_title("Interactive Analytics", fontsize=15)
+    visual.plot(ax=axes[1,2]); axes[1, 2].set_title("Visual Analytics", fontsize=15)
+
+    plt.show()
+
+    # print("Complete generating raw data")
+    #
+    # result.to_csv("./0508/raw_data_0508.csv",encoding="utf-8")
 
     #
     # behavioral_data = behavior_data_generator(files=gio_files,key=["Date","user"])

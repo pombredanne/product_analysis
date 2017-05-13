@@ -72,14 +72,28 @@ def chort_snapshot(sample=pd.DataFrame):
     print(result)
 
 
-if __name__ == "__main__":
+def get_seg_info():
+    segmentation = pd.read_csv("./db_export/segmentations.csv", low_memory=False, parse_dates=["created_at"])
+    segmentation = segmentation[~(segmentation.project_id == 3)]
+
     segmentation = pd.read_csv("./db_export/segmentations.csv", low_memory=False, parse_dates=["created_at"])
     segmentation["year"] = segmentation["created_at"].map(lambda time: time.isocalendar()[0])
     segmentation["week"] = segmentation["created_at"].map(lambda time: time.isocalendar()[1])
-    segmentation = segmentation[~(segmentation.project_id == 3)]
+    segmentation["hour"] = segmentation["created_at"].map(lambda time: time.hour)
+    segmentation["created_at"] = segmentation["created_at"].map(lambda time: time.strftime("%Y-%m-%d"))
+
+    return segmentation[["id","project_id", "name", "created_at", "creator_id", "user_nums", "user_range", "year", "week", "hour"]]
+
+
+if __name__ == "__main__":
+    print(get_seg_info())
+    # segmentation = pd.read_csv("./db_export/segmentations.csv", low_memory=False, parse_dates=["created_at"])
+    # segmentation["year"] = segmentation["created_at"].map(lambda time: time.isocalendar()[0])
+    # segmentation["week"] = segmentation["created_at"].map(lambda time: time.isocalendar()[1])
+    # segmentation = segmentation[~(segmentation.project_id == 3)]
 
 
     # user_num_sum(sample=segmentation)
-    seg_sum(sample=segmentation)
+    # seg_sum(sample=segmentation)
     # cohort_con(sample=segmentation)
     # chort_snapshot(sample=segmentation)

@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from raw_process import raw_prepare
 import jieba
 
 
@@ -75,19 +76,50 @@ def funnel_name_sum(sample=pd.DataFrame):
     wc[:20].to_csv("funnel_word_count.csv", encoding="utf-8")
 
 
+def days_convertor(timed=""):
+    unit = timed.split(":")[0]
+    dur = timed.split(":")[1]
+
+    if unit == "abs":
+        dur = int(dur.split(",")[1]) - int(dur.split(",")[0])
+        return int( dur / ( 86400 * 1000) )
+    elif unit == "day":
+        if dur == "prev":
+            return 7
+        else:
+            return int(dur.split(",")[0]) - int(dur.split(",")[1])
+    elif unit == "month":
+        if dur == "prev":
+            return 30
+        else:
+            return ( int(dur.split(",")[0]) - int(dur.split(",")[1]) )*30
+    else:
+        if dur == "prev":
+            return 7
+        else:
+            return  ( int(dur.split(",")[0]) - int(dur.split(",")[1]) )*7
+
+
+def get_funnel_info():
+    funnel_reports = pd.read_csv("./chart_dashboard/funnels.csv", parse_dates=["created_at"])
+    funnel_reports = raw_prepare(funnel_reports)
+    funnel_reports["created_at"] = funnel_reports["created_at"].map(lambda time: time.strftime("%Y-%m-%d"))
+
+    funnel_reports["steps"] = funnel_reports["steps"].map(lambda steps: len(steps.split(",")))
+    funnel_reports["range"] = funnel_reports["range"].map(lambda range: days_convertor(range))
+
+
+    return funnel_reports
+
+
 if __name__ == "__main__":
 
     funnel_reports = pd.read_csv("./chart_dashboard/funnels.csv", parse_dates=["created_at"])
-    funnel_reports = funnel_reports[funnel_reports.project_id != 3]
-
-    funnel_reports["year"] = funnel_reports["created_at"].map(lambda time: time.isocalendar()[0])
-    funnel_reports["week"] = funnel_reports["created_at"].map(lambda time: time.isocalendar()[1])
-    funnel_mean_week = funnel_reports.groupby(["year", "week"])[["id"]].agg("count").mean()
-
+    funnel_reports = raw_prepare(funnel_reports)
 
     # funnel_growth(sample=funnel_reports)
     # funnel_steps(sample=funnel_reports)
-    # funnel_timepicker(sample=funnel_reports)
+    funnel_timepicker(sample=funnel_reports)
     # funnel_conversion_window(sample=funnel_reports)
-    funnel_name_sum(sample=funnel_reports)
+    # funnel_name_sum(sample=funnel_reports)
 

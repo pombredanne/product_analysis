@@ -107,7 +107,7 @@ def sub_chart_sum(sample=pd.DataFrame, charts=pd.DataFrame, users=pd.DataFrame):
 
     # plt.show()
 
-    # board_name_sum(sample=charts, name="Total Charts")
+    board_name_sum(sample=charts, name="Total Charts")
     # board_name_sum(sample=subd_charts, name="Sub Active Charts")
 
     grouped_sub = subd_charts.groupby(["chart_type"])["id_y"].agg("count").rename("Subscribed")
@@ -233,6 +233,8 @@ def dashboard_chart2(sample=pd.DataFrame, charts=pd.DataFrame):
     da_chart = pd.merge(da_chart, charts, how="left", left_on=["dashboard_id"], right_on=["id"])
     da_chart = da_chart[(da_chart.status_x == "activated") & (da_chart.status_y == "activated")]
 
+    # board_name_sum(sample=da_chart)
+
     grouped_did = da_chart.groupby(["dashboard_id"])["chart_id"].agg("count").describe()
     print(grouped_did)
 
@@ -273,6 +275,7 @@ def board_name_sum(sample=pd.DataFrame, name=""):
             word_dict[word] = 1
 
     wc = pd.DataFrame(list(word_dict.items()), columns=["word", "count"]).sort_values(by="count", ascending=False).set_index(["word"])
+
     print("Start to Output " + name + " Top 20 words")
     wc[:20].to_csv(name + "_word_count.csv", encoding="utf-8")
 
@@ -301,7 +304,7 @@ if __name__ == "__main__":
     # chart_summary(charts, ndd)
     # dashboard_project_sum(ndd)
     # dashboard_usage(ndd)
-    dashboard_chart2(ndd, charts=charts)
-    # sub_chart_sum(subs, charts=charts, users=users)
+    # dashboard_chart2(ndd, charts=charts)
+    sub_chart_sum(subs, charts=charts, users=users)
     # sub_dashboard_sum(subs, dashboard=ndd, charts=charts)
     # board_name_sum(sample=ndd)

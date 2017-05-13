@@ -78,12 +78,26 @@ def retention_name_sum(sample=pd.DataFrame):
     print("Start to Output Top 20 words")
     wc[:20].to_csv("retention_word_count.csv", encoding="utf-8")
 
-if __name__ == "__main__":
+
+def get_retention_intfo():
     retens = pd.read_csv("./db_export/retentions.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
     retens = retens[retens.project_id != 3]
-    retens = retens[(retens.status == "activated") & (retens.project_id != 3)]
     retens["year"] = retens["created_at"].map(lambda time: time.isocalendar()[0])
     retens["week"] = retens["created_at"].map(lambda time: time.isocalendar()[1])
+    retens["hour"] = retens["created_at"].map(lambda time: time.hour)
+    retens["created_at"] = retens["created_at"].map(lambda time: time.strftime("%Y-%m-%d"))
 
-    # reten_sum(sample=retens)
-    retention_name_sum(sample=retens)
+    return retens
+
+
+if __name__ == "__main__":
+
+    print(get_retention_intfo())
+    # retens = pd.read_csv("./db_export/retentions.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
+    # retens = retens[retens.project_id != 3]
+    # retens = retens[(retens.status == "activated") & (retens.project_id != 3)]
+    # retens["year"] = retens["created_at"].map(lambda time: time.isocalendar()[0])
+    # retens["week"] = retens["created_at"].map(lambda time: time.isocalendar()[1])
+    #
+    # # reten_sum(sample=retens)
+    # retention_name_sum(sample=retens)
