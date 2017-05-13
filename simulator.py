@@ -40,6 +40,7 @@ def user_simulator(start_date=None,end_date=None,period=None,file_name=None,user
     result["year_iso"] = result["sim_date"].map(lambda time : time.isocalendar()[0])
     result["week_iso"] = result["sim_date"].map(lambda time: time.isocalendar()[1])
     result["weekday_iso"] = result["sim_date"].map(lambda time : time.isocalendar()[2])
+    result["hour"] = result["sim_date"].map(lambda time : time.hour)
 
     print("Start remove non-exisit date of users ")
 

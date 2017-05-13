@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from raw_process import raw_prepare
+from raw_process import days_convertor
 import jieba
 
 
@@ -76,30 +77,6 @@ def funnel_name_sum(sample=pd.DataFrame):
     wc[:20].to_csv("funnel_word_count.csv", encoding="utf-8")
 
 
-def days_convertor(timed=""):
-    unit = timed.split(":")[0]
-    dur = timed.split(":")[1]
-
-    if unit == "abs":
-        dur = int(dur.split(",")[1]) - int(dur.split(",")[0])
-        return int( dur / ( 86400 * 1000) )
-    elif unit == "day":
-        if dur == "prev":
-            return 7
-        else:
-            return int(dur.split(",")[0]) - int(dur.split(",")[1])
-    elif unit == "month":
-        if dur == "prev":
-            return 30
-        else:
-            return ( int(dur.split(",")[0]) - int(dur.split(",")[1]) )*30
-    else:
-        if dur == "prev":
-            return 7
-        else:
-            return  ( int(dur.split(",")[0]) - int(dur.split(",")[1]) )*7
-
-
 def get_funnel_info():
     funnel_reports = pd.read_csv("./chart_dashboard/funnels.csv", parse_dates=["created_at"])
     funnel_reports = raw_prepare(funnel_reports)
@@ -108,8 +85,21 @@ def get_funnel_info():
     funnel_reports["steps"] = funnel_reports["steps"].map(lambda steps: len(steps.split(",")))
     funnel_reports["range"] = funnel_reports["range"].map(lambda range: days_convertor(range))
 
+    cols = ["id", "project_id","creator_id",
+            "steps", "status", "range",
+            "status", "platform", "conversion_window",
+            "created_at", "year", "week", "weekday", "hour"]
 
-    return funnel_reports
+    rename_dic = {
+        "id" : "funnel_id",
+        "steps" : "funnel_steps",
+        "status" : "funnel_status",
+        "range" : "funnel_range",
+        "platform" : "funnel_platform",
+        "conversion_window" : "funnel_cw",
+    }
+
+    return funnel_reports[cols].rename(columns=rename_dic)
 
 
 if __name__ == "__main__":
@@ -117,9 +107,11 @@ if __name__ == "__main__":
     funnel_reports = pd.read_csv("./chart_dashboard/funnels.csv", parse_dates=["created_at"])
     funnel_reports = raw_prepare(funnel_reports)
 
+    print(get_funnel_info())
+
     # funnel_growth(sample=funnel_reports)
     # funnel_steps(sample=funnel_reports)
-    funnel_timepicker(sample=funnel_reports)
+    # funnel_timepicker(sample=funnel_reports)
     # funnel_conversion_window(sample=funnel_reports)
     # funnel_name_sum(sample=funnel_reports)
 

@@ -113,14 +113,39 @@ def metrics_name_sum(sample=pd.DataFrame):
     wc[:20].to_csv("word_count.csv", encoding="utf-8")
 
 
-if __name__ == "__main__":
-
-    metrics = pd.read_csv("./db_export/metrics.csv", low_memory=False, error_bad_lines=False, parse_dates=["created_at", "updated_at"])
+def get_metrics_intfo():
+    metrics = pd.read_csv("./db_export/metrics.csv", low_memory=False, error_bad_lines=False,
+                          parse_dates=["created_at", "updated_at"])
 
     metrics = raw_prepare(metrics)
     metrics["exp_type"] = metrics["flatten_expression"].map(lambda exp: metrics_type(exp=exp))
+    metrics["created_at"] = metrics["created_at"].map(lambda time: time.strftime("%Y-%m-%d"))
 
-    metrics_sum(sample=metrics)
+    cols = ["id","project_id", "creator_id",
+            "created_at", "status", "exp_type",
+            "action", "year", "week", "weekday", "hour"]
+
+    metrics = metrics[cols]
+    rename_dic = {
+        "id": "metric_id",
+        "status": "metric_status",
+        "exp_type" : "metrics_exp_type",
+        "action" : "metric_action"
+    }
+
+    return metrics.rename(columns=rename_dic)
+
+
+if __name__ == "__main__":
+
+    # metrics = pd.read_csv("./db_export/metrics.csv", low_memory=False, error_bad_lines=False, parse_dates=["created_at", "updated_at"])
+    #
+    # metrics = raw_prepare(metrics)
+    # metrics["exp_type"] = metrics["flatten_expression"].map(lambda exp: metrics_type(exp=exp))
+
+    print(get_metrics_intfo())
+
+    # metrics_sum(sample=metrics)
     # metrics_flexp_sum(sample=metrics)
     # archive_periods(sample=metrics)
     # metrics_exp_sum(sample=metrics)

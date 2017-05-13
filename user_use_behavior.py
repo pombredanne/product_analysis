@@ -6,22 +6,22 @@ from simulator import user_simulator
 import  re
 
 session_behavior = ["avg_duration","visits"]
-view_event = ["chart_all_pv","chart_list_pv","create_chart_pv","edit_chart_pv",
-                  "dashboard_all_pv","create_dashboard_pv","edit_dashboard_pv","dashboard_list_pv",
-                  "funnel_all_pv","retention_all_pv","user_details_pv","realtime_pv","heatmap_use_imp",
-                  "create_funnel_pv","scene_list_pv","scene_all_pv"]
+view_event = ["chart_all_pv", "chart_list_pv", "create_chart_pv", "edit_chart_pv",
+                  "dashboard_all_pv", "create_dashboard_pv", "edit_dashboard_pv","dashboard_list_pv",
+                  "funnel_all_pv", "retention_all_pv", "user_details_pv", "realtime_pv","heatmap_use_imp",
+                  "create_funnel_pv", "scene_list_pv", "scene_all_pv"]
 
-click_event = ["dashboard_filter_clck","dashboard_usercohort_clck",
-                      "dashboard_time_clck","dashboard_create_save_clck",
+click_event = ["dashboard_filter_clck", "dashboard_usercohort_clck",
+                      "dashboard_time_clck", "dashboard_create_save_clck",
                       "dashboard_edit_update_clck",
-                      "chart_detail_usercohort_clck","chart_detail_filter_clck",
-                      "chart_detail_time_clck","chart_create_save_clck",
-                      "chart_edit_savetoanother_clck","chart_edit_update_clck",
-                      "chart_list_filter_clck","chart_list_time_clck",
-                      "funnel_Dimension_clck","funnel_time_clck",
-                      "funnel_trend_clck","funnel_create_save_clck",
-                      "retention_time_clck","retention_Dimension_clck",
-                      "retention_detail_behavior_clck","scene_time_clck","scene_filter_clck","scene_usercohort_clck"]
+                      "chart_detail_usercohort_clck", "chart_detail_filter_clck",
+                      "chart_detail_time_clck", "chart_create_save_clck",
+                      "chart_edit_savetoanother_clck", "chart_edit_update_clck",
+                      "chart_list_filter_clck", "chart_list_time_clck",
+                      "funnel_Dimension_clck", "funnel_time_clck",
+                      "funnel_trend_clck", "funnel_create_save_clck",
+                      "retention_time_clck", "retention_Dimension_clck",
+                      "retention_detail_behavior_clck", "scene_time_clck", "scene_filter_clck", "scene_usercohort_clck"]
 
 interactive_expl_sum_key = ["user_details_pv","retention_detail_behavior_clck",
 "funnel_time_clck","funnel_trend_clck","funnel_Dimension_clck",
@@ -31,9 +31,9 @@ interactive_expl_sum_key = ["user_details_pv","retention_detail_behavior_clck",
 "retention_time_clck","retention_Dimension_clck",
 "dashboard_usercohort_clck","dashboard_filter_clck","dashboard_time_clck","scene_time_clck","scene_filter_clck","scene_usercohort_clck"]
 
-computed_fields = ["consumption_pv_sum","interactive_action_sum",
-                   "single_diagram_view","funnel_report_view",
-                   "analytics_dashboard","visual_analytic","net_income","capital_expenditure"]
+computed_fields = ["consumption_pv_sum", "interactive_action_sum",
+                   "single_diagram_view", "funnel_report_view",
+                   "analytics_dashboard", "visual_analytic", "net_income", "capital_expenditure"]
 
 
 behavior_names = [session_behavior, view_event, click_event]
@@ -67,7 +67,7 @@ def behavior_data_generator(files=[],key=[]):
     result = reduce(lambda left, right: pd.merge(left, right, how="left", on=["user", "Date"]), dfs)
     result = result.fillna(0)
 
-    result["avg_duration"] = result["avg_duration"].map(lambda time : secs_convertor(time))
+    result["avg_duration"] = result["avg_duration"].map(lambda time : time * 60)
 
     result["consumption_pv_sum"] = result["create_chart_pv"] + result["create_dashboard_pv"] + result["edit_chart_pv"] + result["create_funnel_pv"] + result["edit_dashboard_pv"]
     result["interactive_action_sum"] = result["user_details_pv"]+result["retention_detail_behavior_clck"]+result["funnel_time_clck"]+result["funnel_trend_clck"]+result["funnel_Dimension_clck"]+result["chart_list_time_clck"]+result["chart_list_filter_clck"]+result["chart_detail_filter_clck"]+result["chart_detail_time_clck"]+result["chart_detail_usercohort_clck"]+result["heatmap_use_imp"]+result["retention_time_clck"]+result["retention_Dimension_clck"]+result["dashboard_usercohort_clck"]+result["dashboard_filter_clck"]+result["dashboard_time_clck"]
@@ -80,8 +80,8 @@ def behavior_data_generator(files=[],key=[]):
     result["net_income"] = result["visual_analytic"]
     result["capital_expenditure"] = -1 * result["consumption_pv_sum"]
 
-
     return result
+
 
 def user_generator(sim_user_filter=None,user_org_filter=None,user_max_id=None ):
     return user_simulator("2016/12/1","2017/5/8", period=1, file_name=sim_user_filter, user_max_id=user_max_id )
@@ -122,6 +122,7 @@ def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavio
 
     return cohorts_obj
 
+
 def get_tableau_raw_data(user_src=pd.DataFrame,behavior_src=pd.DataFrame):
 
     columns = session_behavior + view_event + click_event + computed_fields
@@ -131,6 +132,7 @@ def get_tableau_raw_data(user_src=pd.DataFrame,behavior_src=pd.DataFrame):
     result[columns] = result[columns].fillna(0)
 
     return result
+
 
 def get_tableau_raw_data_from_source(files=[], user_max_id=None):
 
@@ -153,11 +155,14 @@ def get_tableau_raw_data_from_source(files=[], user_max_id=None):
 def get_core_user(sample=pd.DataFrame):
     return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] > 0)  & (sample["consumption_pv_sum"] > 0 )]
 
+
 def get_active_user(sample=pd.DataFrame):
     return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] > 0)  | (sample["consumption_pv_sum"] > 0 )]
 
+
 def get_casual_user(sample=pd.DataFrame):
     return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] == 0) & (sample["consumption_pv_sum"] == 0 )]
+
 
 def get_login_user(sample=pd.DataFrame):
     return sample[(sample["visits"] > 0)]

@@ -15,3 +15,26 @@ def raw_prepare(sample):
     sample = sample.assign(weekday=lambda df: df["created_at"].map(lambda time: time.isoweekday()))
 
     return sample
+
+def days_convertor(timed=""):
+    unit = timed.split(":")[0]
+    dur = timed.split(":")[1]
+
+    if unit == "abs":
+        dur = int(dur.split(",")[1]) - int(dur.split(",")[0])
+        return int( dur / ( 86400 * 1000) )
+    elif unit == "day":
+        if dur == "prev":
+            return 7
+        else:
+            return int(dur.split(",")[0]) - int(dur.split(",")[1])
+    elif unit == "month":
+        if dur == "prev":
+            return 30
+        else:
+            return ( int(dur.split(",")[0]) - int(dur.split(",")[1]) )*30
+    else:
+        if dur == "prev":
+            return 7
+        else:
+            return  ( int(dur.split(",")[0]) - int(dur.split(",")[1]) )*7

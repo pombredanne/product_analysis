@@ -13,6 +13,7 @@ def udf_growth(cs=pd.DataFrame, ps=pd.DataFrame):
 
     plt.show()
 
+
 def udf_project_share(cs=pd.DataFrame, ps=pd.DataFrame, pids=pd.DataFrame):
 
     cs_pids = cs["project_id"].drop_duplicates()
@@ -51,7 +52,6 @@ def udf_project_sum(cs=pd.DataFrame, ps=pd.DataFrame):
 
     r = cs.groupby(["cs"])["id"].agg("count").sort_values(ascending=False)
     print(r)
-
 
 
 if __name__ == '__main__':

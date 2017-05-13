@@ -281,29 +281,74 @@ def board_name_sum(sample=pd.DataFrame, name=""):
     wc[:20].to_csv(name + "_word_count.csv", encoding="utf-8")
 
 
-if __name__ == "__main__":
-    date_columns = ["created_at", "updated_at"]
+def get_dashboard_info():
+    dashboard = pd.read_csv("./chart_dashboard/dashboards.csv", low_memory=False,
+                            parse_dates=["created_at", "updated_at"])
+    dashboard = raw_prepare(dashboard)
+    dashboard = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())]
+    dashboard["chart_num"] = dashboard["chart_ids"].map(lambda ids: len(ids.split(",")))
+    dashboard["created_at"] = dashboard["created_at"].map(lambda time: time.strftime("%Y-%m-%d"))
 
-    projects = pd.read_csv("./0508/user_project_org_info.csv", low_memory=False)
-    aproject_ids =  projects[~projects.first_date_of_getting_pv.isnull()]["project_id"].drop_duplicates()
+    cols = ["id", "project_id", "chart_num", "status",
+            "creator_id", "created_at", "year", "week", "weekday", "hour"]
+
+    rename_dic = {
+        "id" : "dashboard_id",
+        "chart_num" : "dashboard_chart_num",
+        "status" : "dashboard_chart_status"
+    }
+
+    return dashboard[cols].rename(columns=rename_dic)
+
+
+def get_charts_info():
 
     charts = pd.read_csv("./chart_dashboard/charts.csv", low_memory=False, parse_dates=["created_at"])
-    dashboard = pd.read_csv("./chart_dashboard/dashboards.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
-    subs = pd.read_csv("./chart_dashboard/subscriptions.csv", low_memory=False)
-    users = pd.read_csv("./0502/user_org_project_info.csv", low_memory=False)
-
-    dashboard = raw_prepare(dashboard)
-    dashboard = dashboard[dashboard.project_id.isin(aproject_ids)]
-
     charts = raw_prepare(charts)
-    charts = charts[charts.project_id.isin(aproject_ids)]
+    charts["created_at"] = charts["created_at"].map(lambda time: time.strftime("%Y-%m-%d"))
 
-    ndd = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())]
+    charts = charts.assign(metrics_num=count_psql_array(charts["metrics"]))
+    charts = charts.assign(dims_num=count_psql_array(charts["dimensions"]))
+
+    cols = ["id", "chart_type", "metrics_num", "creator_id",
+            "dims_num", "created_at",
+            "year", "week", "weekday", "hour"]
+
+    rename_dic = {
+        "id" : "chart_id",
+        "metrics_num" : "chart_metrics_num",
+        "dim_num" : "chart_dim_num"
+    }
+
+    return charts[cols].rename(columns=rename_dic)
+
+
+if __name__ == "__main__":
+
+    print(get_charts_info())
+    # print(get_dashboard_info())
+    # date_columns = ["created_at", "updated_at"]
+    #
+    # projects = pd.read_csv("./0508/user_project_org_info.csv", low_memory=False)
+    # aproject_ids =  projects[~projects.first_date_of_getting_pv.isnull()]["project_id"].drop_duplicates()
+    #
+    # charts = pd.read_csv("./chart_dashboard/charts.csv", low_memory=False, parse_dates=["created_at"])
+    # dashboard = pd.read_csv("./chart_dashboard/dashboards.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
+    # subs = pd.read_csv("./chart_dashboard/subscriptions.csv", low_memory=False)
+    # users = pd.read_csv("./0502/user_org_project_info.csv", low_memory=False)
+    #
+    # dashboard = raw_prepare(dashboard)
+    # dashboard = dashboard[dashboard.project_id.isin(aproject_ids)]
+    #
+    # charts = raw_prepare(charts)
+    # charts = charts[charts.project_id.isin(aproject_ids)]
+    #
+    # ndd = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())]
     # chart_type_summary(charts)
     # chart_summary(charts, ndd)
     # dashboard_project_sum(ndd)
     # dashboard_usage(ndd)
     # dashboard_chart2(ndd, charts=charts)
-    sub_chart_sum(subs, charts=charts, users=users)
+    # sub_chart_sum(subs, charts=charts, users=users)
     # sub_dashboard_sum(subs, dashboard=ndd, charts=charts)
     # board_name_sum(sample=ndd)
