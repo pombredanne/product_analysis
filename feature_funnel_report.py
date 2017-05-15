@@ -148,11 +148,11 @@ def funnel_metric(s=pd.DataFrame):
 
     result = pd.DataFrame.from_records(per, columns=["fid", "am_per", "dm_per"])
     labels = ["{0} - {1}".format(i, i + 10) for i in range(0, 110, 10)]
-    dm_cut = pd.cut(result["dm_per"], range(0, 115, 10), right=False, labels=labels).rename("cut")
+    dm_cut = pd.cut(result["dm_per"], range(0, 115, 10), right=False, labels=labels).rename("breaking_level")
 
-    describe = pd.concat([result, dm_cut], axis=1).groupby("cut")["fid"].agg("count").rename("Dead Metric Count")
-    describe_per =  round( describe*100 / np.sum(describe), 3).rename("broken_per")
-    describe = pd.concat([describe, describe_per],axis=1).sort_values(by="alive_per", ascending=False)
+    describe = pd.concat([result, dm_cut], axis=1).groupby("breaking_level")["fid"].agg("count").rename("Dead Metric Count")
+    describe_per = round( describe*100 / np.sum(describe), 3).rename("funnel_share")
+    describe = pd.concat([describe, describe_per],axis=1).sort_values(by="funnel_share", ascending=False)
 
     print(describe)
 
