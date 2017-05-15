@@ -325,16 +325,42 @@ def get_charts_info():
     return charts[cols].rename(columns=rename_dic)
 
 
+def chart_metrics(c=pd.DataFrame):
+    metric_event_rule = pd.read_csv("./db_export/growing_metrics_event_rule.csv", low_memory=False)
+    nouse = pd.read_csv("./db_export/nouse_metrics_rule_id.csv", low_memory=False)
+    nouse_metric_ids = pd.merge(nouse, metric_event_rule, how="left", left_on=["rules_id"], right_on=["rule_id"])[
+        "metric_id"].drop_duplicates().sort_values()
+
+    c["metrics"] =  c["metrics"].map(lambda exp: list(re.compile("{(.*?)}").findall(exp)[0].split(",")))
+    sc = c[["id", "chart_type", "metrics"]].reset_index(drop=False)
+
+    cms = []
+    for i in sc.index.get_values():
+        for si in sc.iloc[i]["metrics"]:
+            cms.append((sc.iloc[i]["id"], si))
+
+    cms = pd.DataFrame.from_records(cms, columns=["cid", "metric_id"])
+    result = pd.merge(sc, cms, how="left", left_on=["id"], right_on=["cid"])
+
+    print()
+
+    # result["metric_id"] = result["metric_id"].astype("int")
+    result["astatus"] = result["metric_id"].map(lambda id: "dead" if id in nouse_metric_ids else "alive")
+
+    print(len(result[result.metric_id.isin(nouse)]))
+    print(len(result))
+
+
 if __name__ == "__main__":
 
-    print(get_charts_info())
+    # print(get_charts_info())
     # print(get_dashboard_info())
     # date_columns = ["created_at", "updated_at"]
     #
-    # projects = pd.read_csv("./0508/user_project_org_info.csv", low_memory=False)
-    # aproject_ids =  projects[~projects.first_date_of_getting_pv.isnull()]["project_id"].drop_duplicates()
+    projects = pd.read_csv("./0508/user_project_org_info.csv", low_memory=False)
+    aproject_ids =  projects[~projects.first_date_of_getting_pv.isnull()]["project_id"].drop_duplicates()
     #
-    # charts = pd.read_csv("./chart_dashboard/charts.csv", low_memory=False, parse_dates=["created_at"])
+    charts = pd.read_csv("./chart_dashboard/charts.csv", low_memory=False, parse_dates=["created_at"])
 
     # dashboard = pd.read_csv("./chart_dashboard/dashboards.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
     # subs = pd.read_csv("./chart_dashboard/subscriptions.csv", low_memory=False)
@@ -343,9 +369,11 @@ if __name__ == "__main__":
     # dashboard = raw_prepare(dashboard)
     # dashboard = dashboard[dashboard.project_id.isin(aproject_ids)]
     #
-    # charts = raw_prepare(charts)
-    # charts = charts[charts.project_id.isin(aproject_ids)]
-    #
+    charts = raw_prepare(charts)
+    charts = charts[charts.project_id.isin(aproject_ids)]
+
+    chart_metrics(c=charts)
+
     # ndd = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())]
     # chart_type_summary(charts)
     # chart_summary(charts, ndd)
