@@ -26,6 +26,7 @@ def funnel_timepicker(sample=pd.DataFrame):
     plt.legend()
     plt.show()
 
+
 def funnel_steps(sample=pd.DataFrame):
 
     sample["steps_count"] = sample["steps"].map(lambda steps: len(steps.split(",")))
@@ -55,6 +56,7 @@ def funnel_growth(sample=pd.DataFrame):
 
     plt.legend()
     plt.show()
+
 
 def funnel_name_sum(sample=pd.DataFrame):
 
@@ -107,6 +109,9 @@ def parse_steps(steps=""):
     if steps.split("_")[0] == "m":
         regex = re.compile("m_(.*?)_")
         return re.findall(regex, steps)
+    elif steps.split("_")[0] == "e":
+        regex = re.compile("e_(.*?)_")
+        return re.findall(regex, steps)
     else:
         return steps.split(",")
 
@@ -114,8 +119,8 @@ def parse_steps(steps=""):
 def funnel_metric(s=pd.DataFrame):
     metric_event_rule = pd.read_csv("./db_export/growing_metrics_event_rule.csv", low_memory=False)
     nouse = pd.read_csv("./db_export/nouse_metrics_rule_id.csv", low_memory=False)
-    nouse_metric_ids = pd.merge(nouse, metric_event_rule, how="left", left_on=["rules_id"], right_on=["rule_id"])[
-        "metric_id"].drop_duplicates().sort_values().astype("str")
+    nouse_ometric_ids = pd.merge(nouse, metric_event_rule, how="left", left_on=["rules_id"], right_on=["rule_id"])[
+        "ometric_id"].drop_duplicates().dropna().astype(float)
 
     ss = s[["project_id", "id", "steps"]].reset_index()
     ss = ss.assign(steps=lambda df: df["steps"].map(lambda steps: parse_steps(steps)))
@@ -123,28 +128,39 @@ def funnel_metric(s=pd.DataFrame):
 
     for i in ss.index.get_values():
         for si in ss.iloc[i]["steps"]:
-            fs.append((ss.iloc[i]["id"], si))
+            try:
+                fs.append((ss.iloc[i]["id"], int(si)))
+            except:
+                pass
 
-    fs = pd.DataFrame.from_records(fs, columns=["fid", "metric_id"])
+    fs = pd.DataFrame.from_records(fs, columns=["fid", "ometric_id"])
     result = pd.merge(ss, fs, how="left", left_on=["id"], right_on=["fid"])
-    result["astatus"] = result["metric_id"].map(lambda id: "dead" if id in nouse_metric_ids else "alive")
+    result = result[~result["ometric_id"].isnull()]
+    result["astatus"] = result["ometric_id"].map(lambda id: "dead" if id in nouse_ometric_ids else "alive")
 
-    print(result[["project_id", "steps", "metric_id", "astatus"]])
+    fids = result["fid"].drop_duplicates()
+    per = []
+    for fid in fids:
+        rr = result[result["fid"] == fid]
+        fma = len(rr[rr.astatus == "alive"])
+        fmap = round(int(fma)*100/int(len(rr)), 3)
+        per.append((fid, fmap, 100 - fmap ))
 
-    # print(result[["project_id", "steps", "metric_id", "astatus"]])
+    result = pd.DataFrame.from_records(per, columns=["fid", "am_per", "dm_per"])
+    labels = ["{0} - {1}".format(i, i + 10) for i in range(0, 110, 10)]
+    dm_cut = pd.cut(result["dm_per"], range(0, 115, 10), right=False, labels=labels).rename("cut")
 
-    # print(len(result))
-    #
-    # print(len(result["metric_id"].isin(nouse_metric_ids)))
+    describe = pd.concat([result, dm_cut], axis=1).groupby("cut")["fid"].agg("count").rename("Dead Metric Count")
+    describe_per =  round( describe*100 / np.sum(describe), 3).rename("broken_per")
+    describe = pd.concat([describe, describe_per],axis=1).sort_values(by="alive_per", ascending=False)
 
+    print(describe)
 
 
 if __name__ == "__main__":
 
     funnel_reports = pd.read_csv("./chart_dashboard/funnels.csv", parse_dates=["created_at"])
-
     funnel_reports = raw_prepare(funnel_reports)
-
     funnel_metric(s=funnel_reports)
 
     # print(get_funnel_info())

@@ -303,7 +303,6 @@ def get_dashboard_info():
 
 
 def get_charts_info():
-
     charts = pd.read_csv("./chart_dashboard/charts.csv", low_memory=False, parse_dates=["created_at"])
     charts = raw_prepare(charts)
     charts["created_at"] = charts["created_at"].map(lambda time: pd.to_datetime(time.strftime("%Y-%m-%d")))
@@ -329,7 +328,7 @@ def chart_metrics(c=pd.DataFrame):
     metric_event_rule = pd.read_csv("./db_export/growing_metrics_event_rule.csv", low_memory=False)
     nouse = pd.read_csv("./db_export/nouse_metrics_rule_id.csv", low_memory=False)
     nouse_metric_ids = pd.merge(nouse, metric_event_rule, how="left", left_on=["rules_id"], right_on=["rule_id"])[
-        "metric_id"].drop_duplicates().sort_values()
+        "metric_id"].drop_duplicates().sort_values().astype("str")
 
     c["metrics"] =  c["metrics"].map(lambda exp: list(re.compile("{(.*?)}").findall(exp)[0].split(",")))
     sc = c[["id", "chart_type", "metrics"]].reset_index(drop=False)
@@ -342,9 +341,6 @@ def chart_metrics(c=pd.DataFrame):
     cms = pd.DataFrame.from_records(cms, columns=["cid", "metric_id"])
     result = pd.merge(sc, cms, how="left", left_on=["id"], right_on=["cid"])
 
-    print()
-
-    # result["metric_id"] = result["metric_id"].astype("int")
     result["astatus"] = result["metric_id"].map(lambda id: "dead" if id in nouse_metric_ids else "alive")
 
     print(len(result[result.metric_id.isin(nouse)]))
