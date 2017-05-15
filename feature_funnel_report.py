@@ -36,7 +36,6 @@ def funnel_steps(sample=pd.DataFrame):
     for typei in grouped_steps.index:
         grouped.xs(typei, level="steps_count").plot(label=typei)
 
-
     grouped_steps.plot(kind="pie", figsize=(6, 6), subplots=True, autopct='%.2f', fontsize=15, ax=axes[0])
 
     plt.legend()
@@ -80,7 +79,7 @@ def funnel_name_sum(sample=pd.DataFrame):
 def get_funnel_info():
     funnel_reports = pd.read_csv("./chart_dashboard/funnels.csv", parse_dates=["created_at"])
     funnel_reports = raw_prepare(funnel_reports)
-    funnel_reports["created_at"] = funnel_reports["created_at"].map(lambda time: time.strftime("%Y-%m-%d"))
+    funnel_reports["created_at"] = funnel_reports["created_at"].map(lambda time: pd.to_datetime(time.strftime("%Y-%m-%d")))
 
     funnel_reports["steps"] = funnel_reports["steps"].map(lambda steps: len(steps.split(",")))
     funnel_reports["range"] = funnel_reports["range"].map(lambda range: days_convertor(range))
@@ -97,6 +96,7 @@ def get_funnel_info():
         "range" : "funnel_range",
         "platform" : "funnel_platform",
         "conversion_window" : "funnel_cw",
+        "created_at": "funnel_created_at"
     }
 
     return funnel_reports[cols].rename(columns=rename_dic)
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     funnel_reports = pd.read_csv("./chart_dashboard/funnels.csv", parse_dates=["created_at"])
     funnel_reports = raw_prepare(funnel_reports)
 
-    print(get_funnel_info())
+    # print(get_funnel_info())
 
     # funnel_growth(sample=funnel_reports)
     # funnel_steps(sample=funnel_reports)

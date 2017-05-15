@@ -77,14 +77,17 @@ def get_seg_info():
 
     segmentation = pd.read_csv("./db_export/segmentations.csv", low_memory=False, parse_dates=["created_at"])
     segmentation = raw_prepare(segmentation)
-    segmentation["created_at"] = segmentation["created_at"].map(lambda time: time.strftime("%Y-%m-%d"))
+    segmentation["created_at"] = segmentation["created_at"].map(lambda time: pd.to_datetime(time.strftime("%Y-%m-%d")))
 
     cols = ["id","project_id", "created_at", "creator_id", "user_nums", "user_range"]
-    ncols = ["seg_id", "project_id", "seg_created_at","seg_creator_id",  "seg_user_nums",  "seg_user_range"]
+    rename_dic = {
+        "id": "seg_id",
+        "created_at": "seg_created_at",
+        "user_nums": "seg_user_nums",
+        "user_range": "seg_user_range"
+    }
 
-    segmentation = segmentation[cols]
-    segmentation.columns = ncols
-    return segmentation
+    return segmentation[cols].rename(columns=rename_dic)
 
 
 if __name__ == "__main__":

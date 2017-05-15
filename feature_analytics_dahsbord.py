@@ -287,7 +287,7 @@ def get_dashboard_info():
     dashboard = raw_prepare(dashboard)
     dashboard = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())]
     dashboard["chart_num"] = dashboard["chart_ids"].map(lambda ids: len(ids.split(",")))
-    dashboard["created_at"] = dashboard["created_at"].map(lambda time: time.strftime("%Y-%m-%d"))
+    dashboard["created_at"] = dashboard["created_at"].map(lambda time: pd.to_datetime(time.strftime("%Y-%m-%d")))
 
     cols = ["id", "project_id", "chart_num", "status",
             "creator_id", "created_at", "year", "week", "weekday", "hour"]
@@ -295,6 +295,7 @@ def get_dashboard_info():
     rename_dic = {
         "id" : "dashboard_id",
         "chart_num" : "dashboard_chart_num",
+        "created_at": "dashboard_created_at",
         "status" : "dashboard_chart_status"
     }
 
@@ -305,19 +306,20 @@ def get_charts_info():
 
     charts = pd.read_csv("./chart_dashboard/charts.csv", low_memory=False, parse_dates=["created_at"])
     charts = raw_prepare(charts)
-    charts["created_at"] = charts["created_at"].map(lambda time: time.strftime("%Y-%m-%d"))
+    charts["created_at"] = charts["created_at"].map(lambda time: pd.to_datetime(time.strftime("%Y-%m-%d")))
 
     charts = charts.assign(metrics_num=count_psql_array(charts["metrics"]))
     charts = charts.assign(dims_num=count_psql_array(charts["dimensions"]))
 
-    cols = ["id", "chart_type", "metrics_num", "creator_id",
+    cols = ["id","project_id",  "chart_type", "metrics_num", "creator_id",
             "dims_num", "created_at",
             "year", "week", "weekday", "hour"]
 
     rename_dic = {
         "id" : "chart_id",
         "metrics_num" : "chart_metrics_num",
-        "dim_num" : "chart_dim_num"
+        "dim_num" : "chart_dim_num",
+        "created_at": "chart_created_at"
     }
 
     return charts[cols].rename(columns=rename_dic)
@@ -333,6 +335,7 @@ if __name__ == "__main__":
     # aproject_ids =  projects[~projects.first_date_of_getting_pv.isnull()]["project_id"].drop_duplicates()
     #
     # charts = pd.read_csv("./chart_dashboard/charts.csv", low_memory=False, parse_dates=["created_at"])
+
     # dashboard = pd.read_csv("./chart_dashboard/dashboards.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
     # subs = pd.read_csv("./chart_dashboard/subscriptions.csv", low_memory=False)
     # users = pd.read_csv("./0502/user_org_project_info.csv", low_memory=False)

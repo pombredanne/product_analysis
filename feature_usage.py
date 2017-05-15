@@ -135,6 +135,5 @@ if __name__ == "__main__":
     # proddb_growth(c=charts, d=dashboards, f=funnels, r=retentions, m=metrics, s=segmentations, pids=aproject_ids)
     # created_weekday(c=charts, d=dashboards, f=funnels, r=retentions, m=metrics, s=segmentations, pids=aproject_ids)
     # created_hour(c=charts, d=dashboards, f=funnels, r=retentions, m=metrics, s=segmentations, pids=aproject_ids)
-    get_all_raw_data(c=charts, d=dashboards, f=funnels, r=retentions, m=metrics, s=segmentations, pids=aproject_ids)
     # feature_growth(c=charts, d=dashboards, f=funnels, r=retentions, pids=aproject_ids)
 

@@ -33,11 +33,11 @@ if __name__ == "__main__":
 
     t1 = time.time()
 
-    gio_files = ["./0412/0101-0409 user_访问量&访问时长.csv",
-                 "./0412/0101-0409 FQY_主要功能数据_U_user_table_PV浏览类.csv",
-                 "./0412/0101-0409 FQY_主要功能数据_U_user_table_action交互类.csv"]
+    gio_files = ["./0515/20170201-20170515_user_访问量&访问时长.csv",
+                 "./0515/20170201-20170515_FQY_主要功能数据_U_user_table_PV浏览类.csv",
+                 "./0515/20170201-20170515_FQY_主要功能数据_U_user_table_action交互类.csv"]
 
-    result = get_tableau_raw_data_from_source(files=gio_files)
+    result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=67353)
     result = result[result.week_iso != 52]
 
     dims = ["week_iso", "org_name", "level", "industry", "pay_status", "sim_date"]

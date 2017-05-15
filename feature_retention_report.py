@@ -83,33 +83,39 @@ def retention_name_sum(sample=pd.DataFrame):
 def get_retention_intfo():
     retens = pd.read_csv("./db_export/retentions.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
     retens = raw_prepare(retens)
-    retens["created_at"] = retens["created_at"].map(lambda time: time.strftime("%Y-%m-%d"))
+    retens["created_at"] = retens["created_at"].map(lambda time: pd.to_datetime(time.strftime("%Y-%m-%d")))
     retens["time_range"] = retens["time_range"].map(lambda time_range: days_convertor(time_range))
     retens["groups"] = retens["groups"].map(lambda groups: len(str(groups).split(",")))
 
 
     cols = ["id", "project_id",
-            "user_type", "range", "time_range",
+            "user_type", "range", "time_range", "user_id",
             "groups", "scene", "compared_type",
             "status", "created_at", "year",
             "week", "weekday", "hour"]
 
-    ncols = ["reten_id", "project_id", "reten_usertype",
-             "reten_range", "reten_time_range", "reten_groups",
-             "reten_scene", "reten_comp_type", "reten_status",
-             "reten_created_at", "reten_year", "reten_week",
-             "reten_weekday", "reten_hour"]
+    rename_dic = {
+        "id": "reten_id",
+        "user_type": "reten_user_type",
+        "range": "reten_range",
+        "time_range": "reten_time_range",
+        "user_id": "reten_creator_id",
+        "groups": "reten_groups",
+        "scene": "reten_scene",
+        "compared_type": "reten_comp_type",
+        "status": "reten_status",
+        "created_at": "reten_created_at"
+    }
 
-    retens = retens[cols]
-    retens.columns = ncols
-    return retens
+    return retens[cols].rename(columns=rename_dic)
 
 
 if __name__ == "__main__":
 
     retens = pd.read_csv("./db_export/retentions.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
     retens = raw_prepare(retens)
-    # reten_sum(sample=retens)
-    # retention_name_sum(sample=retens)
 
-    print(get_retention_intfo())
+    # # reten_sum(sample=retens)
+    # # retention_name_sum(sample=retens)
+    #
+    # print(get_retention_intfo())
