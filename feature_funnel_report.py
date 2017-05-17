@@ -113,7 +113,10 @@ def parse_steps(steps=""):
         regex = re.compile("e_(.*?)_")
         return re.findall(regex, steps)
     else:
-        return steps.split(",")
+        if '' not in steps.split(","):
+            return steps.split(",")
+        else:
+            return "ns"
 
 
 def funnel_metric(s=pd.DataFrame):
@@ -122,16 +125,14 @@ def funnel_metric(s=pd.DataFrame):
     nouse_ometric_ids = pd.merge(nouse, metric_event_rule, how="left", left_on=["rules_id"], right_on=["rule_id"])[
         "ometric_id"].drop_duplicates().dropna().astype(float)
 
-    ss = s[["project_id", "id", "steps"]].reset_index()
+    ss = s[["project_id", "id", "steps"]]
     ss = ss.assign(steps=lambda df: df["steps"].map(lambda steps: parse_steps(steps)))
+    ss = ss[ss.steps != "ns"].reset_index()
     fs = []
 
     for i in ss.index.get_values():
         for si in ss.iloc[i]["steps"]:
-            try:
-                fs.append((ss.iloc[i]["id"], int(si)))
-            except:
-                pass
+            fs.append((ss.iloc[i]["id"], int(si)))
 
     fs = pd.DataFrame.from_records(fs, columns=["fid", "ometric_id"])
     result = pd.merge(ss, fs, how="left", left_on=["id"], right_on=["fid"])
@@ -154,7 +155,9 @@ def funnel_metric(s=pd.DataFrame):
     describe_per = round( describe*100 / np.sum(describe), 3).rename("funnel_share")
     describe = pd.concat([describe, describe_per],axis=1).sort_values(by="funnel_share", ascending=False)
 
+    describe["funnel_share"].plot(kind='pie', figsize=(6, 6), labels=None, title="Breaking Level Share of Funnel Report")
     print(describe)
+    plt.show()
 
 
 if __name__ == "__main__":

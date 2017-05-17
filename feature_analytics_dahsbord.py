@@ -14,7 +14,21 @@ def psql_parser(exps=pd.Series):
     return exps.map(lambda exp: list(re.compile("{(.*?)}").findall(exp)[0].split(",")))
 
 
+def count_dim_num(exp=""):
+    rs = re.compile("{(.*?)}").findall(exp)[0]
+    if rs == "":
+        return 0
+    else:
+        return len(rs.split(","))
+
+
 def chart_summary(sample=pd.DataFrame, das=pd.DataFrame):
+
+    sample["dim_num"] = sample["dimensions"].map(lambda exp: count_dim_num(exp))
+
+    grouped_typedm = sample.groupby(["chart_type"])["dim_num"].agg([np.mean, np.median, np.std])
+    print(grouped_typedm)
+
     cgrouped_date = sample.groupby(["year", "week"])["id"].agg("count").rename("chart")
     dgrouped_date = das.groupby(["year", "week"])["id"].agg("count").rename("dashbaord")
     result = pd.concat([cgrouped_date, dgrouped_date], axis=1)
@@ -49,21 +63,24 @@ def chart_type_summary(sample=pd.DataFrame):
     grouped_type = sample.groupby(["chart_type"])["id"].agg("count").rename("Charts")
     grouped_atype = sample[sample.status == "activated"].groupby(["chart_type"])["id"].agg("count").rename("Active Charts")
 
-    grouped_projid = sample.groupby(["project_id","chart_type"])["id"].agg("count").rename("count").reset_index().groupby(["chart_type"])["count"].agg([np.mean, np.median, np.std])
+    f = sample[sample.chart_type == "funnel"]
+    print(f.groupby("project_id")["id"].agg("count"))
 
-    print(grouped_projid.sort_values(by="mean", ascending=False))
-
-    per = (round(grouped_atype*100 / grouped_type, 3)).rename("per")
-
-    summary = pd.concat([grouped_atype, grouped_type, per], axis=1).sort_values(by="Active Charts", ascending=False)
-
-    fig, axes = plt.subplots(nrows=1, ncols=2)
-    summary[["Active Charts", "Charts"]].plot.bar(ax=axes[0]).set_title('Usage', fontsize=15)
-    percentage = (summary["Active Charts"] / np.sum( summary["Active Charts"]))
-    percentage.plot(kind='pie', figsize=(6, 6), subplots=True, labels=None) ; axes[1].set_title("Chart Type Share"); axes[1].set_ylabel('')
-    print(percentage)
-    print(summary.sort_values(by="per", ascending=False))
-    plt.show()
+    # grouped_projid = sample.groupby(["project_id","chart_type"])["id"].agg("count").rename("count").reset_index().groupby(["chart_type"])["count"].agg([np.mean, np.median, np.std])
+    #
+    # print(grouped_projid.sort_values(by="mean", ascending=False))
+    #
+    # per = (round(grouped_atype*100 / grouped_type, 3)).rename("per")
+    #
+    # summary = pd.concat([grouped_atype, grouped_type, per], axis=1).sort_values(by="Active Charts", ascending=False)
+    #
+    # fig, axes = plt.subplots(nrows=1, ncols=2)
+    # summary[["Active Charts", "Charts"]].plot.bar(ax=axes[0]).set_title('Usage', fontsize=15)
+    # percentage = (summary["Active Charts"] / np.sum( summary["Active Charts"]))
+    # percentage.plot(kind='pie', figsize=(6, 6), subplots=True, labels=None) ; axes[1].set_title("Chart Type Share"); axes[1].set_ylabel('')
+    # print(percentage)
+    # print(summary.sort_values(by="per", ascending=False))
+    # plt.show()
 
 
 def dashboard_project_sum(sample=pd.DataFrame):
@@ -87,38 +104,43 @@ def dashboard_project_sum(sample=pd.DataFrame):
 
 def sub_chart_sum(sample=pd.DataFrame, charts=pd.DataFrame, users=pd.DataFrame):
 
-    grouped_type = sample.groupby(["subscribe_type"])["user_id"].agg("count").rename("count")
-    type_per = round(grouped_type*100 / np.sum(grouped_type), 1).rename("percentage")
-    grouped_type = pd.concat([grouped_type, type_per], axis=1)
+    # grouped_type = sample.groupby(["subscribe_type"])["user_id"].agg("count").rename("count")
+    # type_per = round(grouped_type*100 / np.sum(grouped_type), 1).rename("percentage")
+    # grouped_type = pd.concat([grouped_type, type_per], axis=1)
 
-    fig, axes = plt.subplots(nrows=1, ncols=2)
-    grouped_type["count"].sort_values(ascending=False).plot.bar(ax=axes[0]); axes[0].set_title("Subscription Type", fontsize=15)
-    grouped_type["percentage"].plot(kind="pie", figsize=(6, 6), subplots=True, fontsize=10) ; axes[1].set_title("Subscription Share", fontsize=15); axes[1].set_ylabel('')
+    # fig, axes = plt.subplots(nrows=1, ncols=2)
+    # grouped_type["count"].sort_values(ascending=False).plot.bar(ax=axes[0]); axes[0].set_title("Subscription Type", fontsize=15)
+    # grouped_type["percentage"].plot(kind="pie", figsize=(6, 6), subplots=True, fontsize=10) ; axes[1].set_title("Subscription Share", fontsize=15); axes[1].set_ylabel('')
     # print(grouped_type)
 
     # plt.show()
 
     subd_charts = pd.merge(sample[sample.subscribe_type == "Chart"], charts[charts.status == "activated"], left_on=["subscribe_id"], right_on=["id"])
-    total_charts = charts[charts.status == "activated"]
-    sub_rate = round(len(subd_charts)*100 / len(total_charts), 3)
-
-    percentage = pd.Series([ sub_rate , 100 -sub_rate], index=["Subscribed", "Not Subscribed"])
+    subd_charts = subd_charts[subd_charts.creator_id != subd_charts.user_id]
+    # chart_metrics(c=subd_charts)
+    # subd_charts_num = subd_charts["id_x"].drop_duplicates()
+    # total_charts = charts[charts.status == "activated"]["id"].drop_duplicates()
+    # sub_rate = round(len(subd_charts_num)*100 / len(total_charts), 3)
+    # print(len(total_charts))
+    # print(len(subd_charts_num))
+    #
+    # percentage = pd.Series([ sub_rate , 100 -sub_rate], index=["Subscribed", "Not Subscribed"])
     # print([ sub_rate , 100 -sub_rate])
-    percentage.plot(kind="pie", figsize=(6, 6), subplots=True, fontsize=10, title="Chart Sub Rate")
+    # percentage.plot(kind="pie", figsize=(6, 6), subplots=True, fontsize=10, title="Chart Sub Rate")
 
     # plt.show()
 
-    board_name_sum(sample=charts, name="Total Charts")
+    # board_name_sum(sample=charts, name="Total Charts")
     # board_name_sum(sample=subd_charts, name="Sub Active Charts")
-
-    grouped_sub = subd_charts.groupby(["chart_type"])["id_y"].agg("count").rename("Subscribed")
-    grouped_active = charts[charts.status == "activated"].groupby(["chart_type"])["id"].agg("count").rename("Active")
-    grouped_total = charts.groupby(["chart_type"])["id"].agg("count").rename("Total")
-
-    grouped_chart = pd.concat([grouped_sub, grouped_active, grouped_total], axis=1).sort_values(by="Total", ascending=False)
+    #
+    # grouped_sub = subd_charts.groupby(["chart_type"])["id_y"].agg("count").rename("Subscribed")
+    # grouped_active = charts[charts.status == "activated"].groupby(["chart_type"])["id"].agg("count").rename("Active")
+    # grouped_total = charts.groupby(["chart_type"])["id"].agg("count").rename("Total")
+    #
+    # grouped_chart = pd.concat([grouped_sub, grouped_active, grouped_total], axis=1).sort_values(by="Total", ascending=False)
     # grouped_chart.plot.bar(title="Number of Charts")
     # plt.show()
-
+    #
     subd_charts = subd_charts.assign(metrics_num=count_psql_array(subd_charts["metrics"]))
     charts = charts.assign(metrics_num=count_psql_array(charts["metrics"]))
 
@@ -127,30 +149,30 @@ def sub_chart_sum(sample=pd.DataFrame, charts=pd.DataFrame, users=pd.DataFrame):
     chart_metrics = charts.groupby(["chart_type"])["metrics_num"].agg([np.mean, np.median, np.std]).sort_values(by="mean", ascending=False)
     subd_cp_describe = subd_charts.groupby(["project_id_x",
                                             "chart_type", "id_y"])["metrics_num"].agg(np.sum).reset_index().groupby(["chart_type"])["metrics_num"].agg([np.sum, np.mean, np.median, np.std]).sort_values(by="mean", ascending=False)
-    # print(subd_cp_describe)
+    print(subd_cp_describe)
 
     metrics_num = pd.concat([subd_ct_metrics, nsub_ct_metrics, chart_metrics], axis=1)
     print(metrics_num)
-
-    # print(subd_cp_describe)
-
-    subd_charts_user = pd.merge(subd_charts, users, how="left", left_on=["user_id"], right_on=["user_id_project"])
-    grouped_type_producer = subd_charts_user[~subd_charts_user.role.isin(["Admin", "管理员", "Creator"])].groupby(["chart_type"])["id_x"].agg("count").rename("coworker").sort_values(ascending=False).reset_index()
-    grouped_type_consumer = subd_charts_user[subd_charts_user.role.isin(["Admin", "管理员", "Creator"])].groupby(["chart_type"])["id_x"].agg("count").rename("admin").sort_values(ascending=False).reset_index()
-
-    result = pd.concat([grouped_type_producer, grouped_type_consumer], axis=1)
-    result["network"] = round(result["coworker"] / result["admin"], 3)
-    # print(result)
-
-    num_shrad_charts = len(subd_charts["id_y"].drop_duplicates())
-    num_total_charts = len(charts["id"].drop_duplicates())
-    per_shared_charts = round(num_shrad_charts*100 / num_total_charts, 3)
-    per_nshared_charts =  round( (num_total_charts - num_shrad_charts)*100 / num_total_charts, 3 )
-
-    shared_per = pd.Series([per_shared_charts, per_nshared_charts], index=["Shared", "Not Shared"])
-    shared_per.plot(kind="pie", figsize=(6, 6), subplots=True, autopct='%.2f', fontsize=20)
-
-    plt.show()
+    #
+    # # print(subd_cp_describe)
+    #
+    # subd_charts_user = pd.merge(subd_charts, users, how="left", left_on=["user_id"], right_on=["user_id_project"])
+    # grouped_type_producer = subd_charts_user[~subd_charts_user.role.isin(["Admin", "管理员", "Creator"])].groupby(["chart_type"])["id_x"].agg("count").rename("coworker").sort_values(ascending=False).reset_index()
+    # grouped_type_consumer = subd_charts_user[subd_charts_user.role.isin(["Admin", "管理员", "Creator"])].groupby(["chart_type"])["id_x"].agg("count").rename("admin").sort_values(ascending=False).reset_index()
+    #
+    # result = pd.concat([grouped_type_producer, grouped_type_consumer], axis=1)
+    # result["network"] = round(result["coworker"] / result["admin"], 3)
+    # # print(result)
+    #
+    # num_shrad_charts = len(subd_charts["id_y"].drop_duplicates())
+    # num_total_charts = len(charts["id"].drop_duplicates())
+    # per_shared_charts = round(num_shrad_charts*100 / num_total_charts, 3)
+    # per_nshared_charts =  round( (num_total_charts - num_shrad_charts)*100 / num_total_charts, 3 )
+    #
+    # shared_per = pd.Series([per_shared_charts, per_nshared_charts], index=["Shared", "Not Shared"])
+    # shared_per.plot(kind="pie", figsize=(6, 6), subplots=True, autopct='%.2f', fontsize=20)
+    #
+    # plt.show()
 
 
 def sub_dashboard_sum(sample=pd.DataFrame, dashboard=pd.DataFrame, charts=pd.DataFrame):
@@ -158,18 +180,19 @@ def sub_dashboard_sum(sample=pd.DataFrame, dashboard=pd.DataFrame, charts=pd.Dat
     sub_dab = pd.merge(sample[sample.subscribe_type == "Dashboard"], dashboard[dashboard.status == "activated"],
                        left_on=["subscribe_id"], right_on=["id"])
 
-    # board_name_sum(sub_dab)
+    sub_dab = sub_dab[sub_dab.creator_id != sub_dab.user_id]
+
+    # board_name_sum(sub_dab, name="Sub Dashbaord")
     num_shared_dasd = len(sub_dab["id_y"].drop_duplicates())
     num_total_dasd = len(dashboard["id"].drop_duplicates())
     per_shared_dasd = round(num_shared_dasd * 100 / num_total_dasd, 3)
     per_nshared_dasd = round((num_total_dasd - num_shared_dasd) * 100 / num_total_dasd, 3)
 
     shared_per = pd.Series([per_shared_dasd, per_nshared_dasd], index=["Shared", "Not Shared"])
-    shared_per.plot(kind="pie", figsize=(6, 6), subplots=True)
-    print(shared_per)
+    # shared_per.plot(kind="pie", figsize=(6, 6), subplots=True)
 
-    plt.show()
-
+    # plt.show()
+    #
     dab_users = sub_dab.groupby("subscribe_id")["user_id"].agg("count")
     print(dab_users.describe())
 
@@ -185,9 +208,9 @@ def sub_dashboard_sum(sample=pd.DataFrame, dashboard=pd.DataFrame, charts=pd.Dat
     grouped_type_per = (round(grouped_type*100 / grouped_type_all)).rename("per")
     grouped_type_sum = pd.concat([grouped_type, grouped_type_per], axis=1)
 
-    # print(grouped_type_sum)
-    # grouped_type_sum["num"].plot(kind='pie', figsize=(6, 6), subplots=True,  autopct='%.2f', fontsize=20)
-    # plt.show()
+    print(grouped_type_sum)
+    grouped_type_sum["num"].plot(kind='pie', figsize=(6, 6), subplots=True,  autopct='%.2f', fontsize=20)
+    plt.show()
 
 
 def dashboard_usage(sample=pd.DataFrame, charts=pd.DataFrame):
@@ -233,6 +256,7 @@ def dashboard_chart2(sample=pd.DataFrame, charts=pd.DataFrame):
     da_chart = pd.merge(da_chart, sample, how="left", left_on=["dashboard_id"], right_on=["id"])
     da_chart = pd.merge(da_chart, charts, how="left", left_on=["dashboard_id"], right_on=["id"])
     da_chart = da_chart[(da_chart.status_x == "activated") & (da_chart.status_y == "activated")]
+    da_chart = da_chart[da_chart.user_id != da_chart.creator_id]
 
     # board_name_sum(sample=da_chart)
 
@@ -324,11 +348,11 @@ def get_charts_info():
     return charts[cols].rename(columns=rename_dic)
 
 
-def chart_metrics(c=pd.DataFrame):
+def chart_breaking_level(c=pd.DataFrame):
     metric_event_rule = pd.read_csv("./db_export/growing_metrics_event_rule.csv", low_memory=False)
     nouse = pd.read_csv("./db_export/nouse_metrics_rule_id.csv", low_memory=False)
     nouse_metric_ids = pd.merge(nouse, metric_event_rule, how="left", left_on=["rules_id"], right_on=["rule_id"])[
-        "ometric_id"].drop_duplicates().sort_values().astype(float)
+        "metric_id"].drop_duplicates().sort_values().astype(float)
 
     c["metrics"] =  c["metrics"].map(lambda exp: list(re.compile("{(.*?)}").findall(exp)[0].split(",")))
     sc = c[["id", "chart_type", "metrics"]].reset_index(drop=False)
@@ -341,10 +365,10 @@ def chart_metrics(c=pd.DataFrame):
             except:
                 pass
 
-    cms = pd.DataFrame.from_records(cms, columns=["cid", "ometric_id"])
+    cms = pd.DataFrame.from_records(cms, columns=["cid", "metric_id"])
     result = pd.merge(sc, cms, how="left", left_on=["id"], right_on=["cid"])
-    result = result[~result["ometric_id"].isnull()]
-    result["astatus"] = result["ometric_id"].map(lambda id: "dead" if id in nouse_metric_ids else "alive")
+    result = result[~result["metric_id"].isnull()]
+    result["astatus"] = result["metric_id"].map(lambda id: "dead" if id in nouse_metric_ids else "alive")
 
     fids = result["cid"].drop_duplicates()
     per = []
@@ -362,7 +386,10 @@ def chart_metrics(c=pd.DataFrame):
     describe_per = round( describe*100 / np.sum(describe), 3).rename("chart_share")
     describe = pd.concat([describe, describe_per],axis=1).sort_values(by="chart_share", ascending=False)
 
+    describe["chart_share"].plot(kind='pie', figsize=(6, 6), labels=None, title="Breaking Level Share of Activated Chart Report")
     print(describe)
+
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -376,24 +403,24 @@ if __name__ == "__main__":
     #
     charts = pd.read_csv("./chart_dashboard/charts.csv", low_memory=False, parse_dates=["created_at"])
 
-    # dashboard = pd.read_csv("./chart_dashboard/dashboards.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
+    dashboard = pd.read_csv("./chart_dashboard/dashboards.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
     # subs = pd.read_csv("./chart_dashboard/subscriptions.csv", low_memory=False)
     # users = pd.read_csv("./0502/user_org_project_info.csv", low_memory=False)
     #
-    # dashboard = raw_prepare(dashboard)
-    # dashboard = dashboard[dashboard.project_id.isin(aproject_ids)]
-    #
+    dashboard = raw_prepare(dashboard)
+    dashboard = dashboard[dashboard.project_id.isin(aproject_ids)]
+
     charts = raw_prepare(charts)
     charts = charts[charts.project_id.isin(aproject_ids)]
 
-    chart_metrics(c=charts)
+    # chart_metrics(c=charts)
 
-    # ndd = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())]
+    ndd = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())]
     # chart_type_summary(charts)
     # chart_summary(charts, ndd)
     # dashboard_project_sum(ndd)
     # dashboard_usage(ndd)
-    # dashboard_chart2(ndd, charts=charts)
+    dashboard_chart2(ndd, charts=charts)
     # sub_chart_sum(subs, charts=charts, users=users)
     # sub_dashboard_sum(subs, dashboard=ndd, charts=charts)
     # board_name_sum(sample=ndd)
