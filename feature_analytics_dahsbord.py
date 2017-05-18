@@ -4,6 +4,7 @@ import re
 import matplotlib.pyplot as plt
 import jieba
 from raw_process import raw_prepare
+from saviatr import saviatar_speed
 
 
 def count_psql_array(exps=pd.Series):
@@ -415,12 +416,19 @@ if __name__ == "__main__":
 
     # chart_metrics(c=charts)
 
-    ndd = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())]
+    ndd = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())].reset_index(drop=True)
+    print(len(aproject_ids))
+    dash_saviatar = saviatar_speed(ndd)
+    print(dash_saviatar)
+
+    chart_savitar = saviatar_speed(charts)
+    print(chart_savitar)
+
     # chart_type_summary(charts)
     # chart_summary(charts, ndd)
     # dashboard_project_sum(ndd)
     # dashboard_usage(ndd)
-    dashboard_chart2(ndd, charts=charts)
+    # dashboard_chart2(ndd, charts=charts)
     # sub_chart_sum(subs, charts=charts, users=users)
     # sub_dashboard_sum(subs, dashboard=ndd, charts=charts)
     # board_name_sum(sample=ndd)

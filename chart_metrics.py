@@ -3,6 +3,7 @@ import numpy as np
 import re
 import json
 
+
 def parse_metric_id(s=pd.DataFrame):
 
     s["ometrics"] = s["metrics"].map(lambda exp: re.compile("{(.*?)}").findall(exp)[0].split(","))
@@ -40,7 +41,6 @@ def parse_flatten_m(s=pd.DataFrame, m=pd.DataFrame):
     result = pd.merge(s, cms, how="left", left_on=["id_y"], right_on=["omid"])
 
     return result
-
 
 
 if __name__ == '__main__':
