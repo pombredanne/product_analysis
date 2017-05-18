@@ -419,10 +419,10 @@ if __name__ == "__main__":
     ndd = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())].reset_index(drop=True)
     print(len(aproject_ids))
     dash_saviatar = saviatar_speed(ndd)
-    print(dash_saviatar)
+    print(dash_saviatar.head(20))
 
     chart_savitar = saviatar_speed(charts)
-    print(chart_savitar)
+    print(chart_savitar.head(20))
 
     # chart_type_summary(charts)
     # chart_summary(charts, ndd)

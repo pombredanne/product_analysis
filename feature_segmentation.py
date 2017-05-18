@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from raw_process import raw_prepare
+from saviatr import saviatar_speed
 import json
 
 
@@ -91,12 +92,13 @@ def get_seg_info():
 
 
 if __name__ == "__main__":
-    print(get_seg_info())
-    # segmentation = pd.read_csv("./db_export/segmentations.csv", low_memory=False, parse_dates=["created_at"])
-    # segmentation["year"] = segmentation["created_at"].map(lambda time: time.isocalendar()[0])
-    # segmentation["week"] = segmentation["created_at"].map(lambda time: time.isocalendar()[1])
-    # segmentation = segmentation[~(segmentation.project_id == 3)]
+    # print(get_seg_info())
+    segmentation = pd.read_csv("./db_export/segmentations.csv", low_memory=False, parse_dates=["created_at"])
+    segmentation = raw_prepare(segmentation)
 
+    result = saviatar_speed(segmentation)
+
+    print(result)
 
     # user_num_sum(sample=segmentation)
     # seg_sum(sample=segmentation)
