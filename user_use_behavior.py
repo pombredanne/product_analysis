@@ -86,8 +86,8 @@ def behavior_data_generator(files=[],key=[]):
     return result
 
 
-def user_generator(sim_user_filter=None,user_org_filter=None,user_max_id=None ):
-    return user_simulator("2017/2/1","2017/5/8", period=1, file_name=sim_user_filter, user_max_id=user_max_id )
+def user_generator(sim_user_filter=None,user_org_filter=None,user_max_id=None, startDate="", endDate="" ):
+    return user_simulator(start_date=startDate,end_date=endDate, period=1, file_name=sim_user_filter, user_max_id=user_max_id )
 
 
 def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavior=None, number=True,need_user_id=False):
@@ -103,8 +103,8 @@ def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavio
         overlap_per  = []
 
         for j in range( i + 1, periods):
-            cohort_init   = set(sample[ ( sample["week_iso"] == i ) & ( sample["visits"] > 0 ) ]["user_id"])
-            cohort_return = set(sample[ ( sample["week_iso"] == j ) & ( sample["visits"] > 0 ) ]["user_id"])
+            cohort_init   = set(sample[ ( sample["week_iso"] == i ) & ( sample["visits"] > 0 ) & ( sample["funnel_all_pv"] > 0 ) ]["user_id"])
+            cohort_return = set(sample[ ( sample["week_iso"] == j ) & ( sample["visits"] > 0 ) & ( sample["funnel_all_pv"] > 0 ) ]["user_id"])
 
             overlap_users = list(cohort_init & cohort_return)
 
@@ -137,13 +137,12 @@ def get_tableau_raw_data(user_src=pd.DataFrame,behavior_src=pd.DataFrame):
     return result
 
 
-def get_tableau_raw_data_from_source(files=[], user_max_id=None):
-
+def get_tableau_raw_data_from_source(files=[], user_max_id=None, ffile="", simStartDate="", simEndDate=""):
 
     behavioral_data = behavior_data_generator(files=files, key=["Date", "user"])
     print("Behavior Data Generation Completed")
 
-    users = user_generator(sim_user_filter="./0515/user_org_project_info.csv", user_max_id=user_max_id)
+    users = user_generator(sim_user_filter=ffile, user_max_id=user_max_id, startDate=simStartDate, endDate=simEndDate)
     print("User Data Generation Completed")
 
     columns = session_behavior + view_event + click_event + computed_fields
@@ -160,11 +159,11 @@ def get_core_user(sample=pd.DataFrame):
 
 
 def get_active_user(sample=pd.DataFrame):
-    return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] > 0)  | (sample["consumption_pv_sum"] > 0 )]
+    return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] > 0)  | (sample["consumption_pv_sum"] > 0 ) & (sample["level"] == "C(非优先客户)") | (sample["level"] == "B(小型商机)") & (sample["pay_status"] == "已付费")]
 
 
 def get_casual_user(sample=pd.DataFrame):
-    return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] == 0) & (sample["consumption_pv_sum"] == 0 )]
+    return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] == 0) & (sample["consumption_pv_sum"] == 0 ) & (sample["level"] == "C(非优先客户)" ) | (sample["level"] == "B(小型商机)") & (sample["pay_status"] == "已付费")]
 
 
 def get_login_user(sample=pd.DataFrame):
@@ -177,38 +176,20 @@ def get_metrics_columns_name():
 
 
 if __name__ == "__main__":
-    gio_files = ["./0515/20170201-20170515_user_访问量&访问时长.csv",
-                 "./0515/20170201-20170515_FQY_主要功能数据_U_user_table_PV浏览类.csv",
-                 "./0515/20170201-20170515_FQY_主要功能数据_U_user_table_action交互类.csv"]
+    gio_files = ["./0702/20170101-20170702_user_访问量&访问时长.csv",
+                 "./0702/20170101-20170702_FQY_主要功能数据_U_user_table_PV浏览类.csv",
+                 "./0702/20170101-20170702_FQY_主要功能数据_U_user_table_action交互类.csv"]
 
-    user_max_id = 67353
+    user_project_org_file = "./0702/user_project_org_info.csv"
 
-
-    result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id)
-
-    # result["weekday"] =  result["sim_date"].map(lambda time: time.isoweekday())
+    user_max_id = 73895
 
 
-    # dashboard = result[result["analytics_dashboard"] > 0].groupby(["weekday"])["user_id_project"].agg("count")
-    # chart = result[result["single_diagram_view"] > 0].groupby(["weekday"])["user_id_project"].agg("count")
-    # funnel = result[result["funnel_report_view"] > 0].groupby(["weekday"])["user_id_project"].agg("count")
-    # retention = result[result["retention_all_pv"] > 0].groupby(["weekday"])["user_id_project"].agg("count")
-    # inter = result[result["interactive_action_sum"] > 0].groupby(["weekday"])["user_id_project"].agg("count")
-    # visual = result[result["visual_analytic"] > 0].groupby(["weekday"])["user_id_project"].agg("count")
-    #
-    # fig, axes = plt.subplots(nrows=2, ncols=3)
-    # dashboard.plot(ax=axes[0, 0]); axes[0, 0].set_title("Dashboard", fontsize=15)
-    # chart.plot(ax=axes[0, 1]); axes[0, 1].set_title("Chart", fontsize=15)
-    # visual.plot(ax=axes[0,2]); axes[0, 2].set_title("Visual Analytics", fontsize=15)
-    # retention.plot(ax=axes[1,0]); axes[1, 0].set_title("Retention", fontsize=15)
-    # inter.plot(ax=axes[1,1]); axes[1, 1].set_title("Interactive Analytics", fontsize=15)
-    # visual.plot(ax=axes[1,2]); axes[1, 2].set_title("Visual Analytics", fontsize=15)
-    #
-    # plt.show()
+    result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2016/12/1", simEndDate="2017/6/25")
+    # result = result.drop(["mobile", "name", "email", "sale"], axis=1)
 
-    # print("Complete generating raw data")
-    #
-    result.to_csv("./0515/raw_data_0515.csv",encoding="utf-8")
+
+    result.to_csv("./0702/raw_data_0702.csv", encoding="utf-8")
 
     #
     # behavioral_data = behavior_data_generator(files=gio_files,key=["Date","user"])
@@ -218,19 +199,25 @@ if __name__ == "__main__":
 
     # users = user_generator(sim_user_filter="user_join_org_info_raw.csv",user_org_filter="user_org_info.txt")
     #
-    # result = get_tableau_raw_data(user_src=users,behavior_src=behavioral_data)
-
+    #
+    # result = pd.read_csv("./0626/raw_data_0626v2.csv", encoding="utf-8")
+    #
     # core_user   = get_core_user(result)
     # active_user = get_active_user(result)
     # casual_user = get_casual_user(result)
     #
     #
     # print("DON'T BE PANICK. DATA ARE PREPARED")
+
+    # active_user = active_user[active_user.days_get_pv > 270 & active_user.days_get_pv < 360 ]
+    # casual_user = casual_user[casual_user.days_get_pv > 270 & casual_user.days_get_pv < 360 ]
+    # core_user = core_user[core_user.days_get_pv > 270 & core_user.days_get_pv < 360 ]
+
+
+    # WN = 26
     #
-    # WN = 11
     # i = 0
-    #
-    # for user in [ core_user , active_user, casual_user ]:
+    # for user in [ core_user, active_user, casual_user ]:
     #
     #     if i == 0:
     #         print("Core User Retention Report")
@@ -246,16 +233,7 @@ if __name__ == "__main__":
     #         for j in line:
     #             s += str(j) + "% "
     #         print(s)
-    #
     #     i += 1
-    #
     #     print("\n")
-    #
-
-
-    # behavioral_data.to_csv("./0412_result/user_behavior.csv")
-    # users.to_csv("./0412_result/user_sim.csv")
-    # result.to_csv("./0412_result/result.csv")
-    #
     #
     # print("FUCK ! I AM DONE OF IT")

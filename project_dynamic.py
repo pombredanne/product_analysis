@@ -11,11 +11,10 @@ from feature_segmentation import get_seg_info
 
 
 if __name__ == '__main__':
-    projects = pd.read_csv("./0508/user_project_org_info.csv", low_memory=False, parse_dates=["first_date_of_getting_pv"]).drop_duplicates("project_id").sort_values(by="project_id")
+    projects = pd.read_csv("./0508/user_org_project_info.csv", low_memory=False, parse_dates=["first_date_of_getting_pv"]).drop_duplicates("project_id").sort_values(by="project_id")
     projects = projects[(~projects.first_date_of_getting_pv.isnull()) & (projects.first_date_of_getting_pv > datetime(2016, 1,1))]
 
     features = ["chart", "dashboard", "funnel", "reten", "seg", "metric"]
-
 
     fst_chart = get_charts_info().sort_values(by="chart_created_at").groupby("project_id", as_index=False).first()
     fst_dashboard = get_dashboard_info().sort_values(by="dashboard_created_at").groupby("project_id", as_index=False).first()

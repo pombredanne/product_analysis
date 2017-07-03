@@ -48,6 +48,7 @@ def cohort_con(sample=pd.DataFrame):
     result = pd.concat([con_and, con_or], axis=1)
     print(result)
 
+
 def chort_snapshot(sample=pd.DataFrame):
     # print(json.loads(sample["snapshot"][18191]))
 
@@ -98,9 +99,9 @@ if __name__ == "__main__":
 
     result = saviatar_speed(segmentation)
 
-    print(result)
+    # print(result)
 
-    # user_num_sum(sample=segmentation)
+    user_num_sum(sample=segmentation)
     # seg_sum(sample=segmentation)
     # cohort_con(sample=segmentation)
     # chort_snapshot(sample=segmentation)

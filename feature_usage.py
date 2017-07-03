@@ -108,17 +108,45 @@ def created_hour(c=pd.DataFrame, d=pd.DataFrame, f=pd.DataFrame, m=pd.DataFrame,
     plt.show()
 
 
+def project_usage(c=pd.DataFrame, d=pd.DataFrame, f=pd.DataFrame, m=pd.DataFrame, s=pd.DataFrame, r=pd.DataFrame, pids=pd.DataFrame):
+    default_dashboards = ["市场概况分析", "用户概况分析", "产品概况分析"]
+    default_charts = ["用户获取_Web访问来源", "用户获取_Web端自主投放渠道跟踪",
+                      "用户获取_APP下载渠道", "用户属性_地域分布",
+                      "用户属性_设备属性", "产品使用概况_受访域名", "产品使用概况_Web端跳出率", "产品使用概况_访问时长"]
+    c = c[c.project_id.isin(pids) & ~c.name.isin(default_charts)]
+    d = d[~(d.status== "hidden") & ~(d.type == "realtime") & ~(d.chart_ids.isnull()) & ~(d.name.isin(default_dashboards))]
+
+    cgrouped = c.groupby("project_id")["id"].agg("count").rename("chart")
+    dgrouped = d.groupby("project_id")["id"].agg("count").rename("dashboard")
+    fgrouped = f.groupby("project_id")["id"].agg("count").rename("funnel")
+    mgrouped = m.groupby("project_id")["id"].agg("count").rename("metrics")
+    sgrouped = s.groupby("project_id")["id"].agg("count").rename("segment")
+    rgrouped = r.groupby("project_id")["id"].agg("count").rename("retention")
+
+    groups = [cgrouped, dgrouped, fgrouped, mgrouped, sgrouped, rgrouped]
+
+    result = pd.concat(groups, axis=1)
+    nnull_count = result.notnull().sum(axis=1).rename("count")
+    print(nnull_count.describe())
+
+
 if __name__ == "__main__":
 
     projects = pd.read_csv("./0508/user_project_org_info.csv", low_memory=False)
     aproject_ids = projects[~(projects.first_date_of_getting_pv.isnull())]["project_id"].drop_duplicates()
 
+    default_dashboards = ["市场概况分析", "用户概况分析", "产品概况分析"]
+    default_charts = ["用户获取_Web访问来源", "用户获取_Web端自主投放渠道跟踪",
+                      "用户获取_APP下载渠道", "用户属性_地域分布",
+                      "用户属性_设备属性", "产品使用概况_受访域名", "产品使用概况_Web端跳出率", "产品使用概况_访问时长"]
+
     charts = pd.read_csv("./chart_dashboard/charts.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
     charts = raw_prepare(charts)
+    charts = charts[~charts.isin(default_charts)]
 
     dashboards = pd.read_csv("./chart_dashboard/dashboards.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
     dashboards = raw_prepare(dashboards)
-    dashboards = dashboards[~(dashboards.status == "hidden") & ~(dashboards.type == "realtime") & ~(dashboards.chart_ids.isnull())]
+    dashboards = dashboards[~(dashboards.status == "hidden") & ~(dashboards.type == "realtime") & ~(dashboards.chart_ids.isnull()) & ~(dashboards.name.isin(default_dashboards)) ]
 
     funnels = pd.read_csv("./chart_dashboard/funnels.csv", low_memory=False, parse_dates=["created_at"])
     funnels = raw_prepare(funnels)
@@ -135,5 +163,6 @@ if __name__ == "__main__":
     # proddb_growth(c=charts, d=dashboards, f=funnels, r=retentions, m=metrics, s=segmentations, pids=aproject_ids)
     # created_weekday(c=charts, d=dashboards, f=funnels, r=retentions, m=metrics, s=segmentations, pids=aproject_ids)
     # created_hour(c=charts, d=dashboards, f=funnels, r=retentions, m=metrics, s=segmentations, pids=aproject_ids)
+    project_usage(c=charts, d=dashboards, f=funnels, r=retentions, m=metrics, s=segmentations, pids=aproject_ids)
     # feature_growth(c=charts, d=dashboards, f=funnels, r=retentions, pids=aproject_ids)
 

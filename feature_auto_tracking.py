@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import json
 import jieba
 from raw_process import raw_prepare
+from saviatr import saviatar_speed
+
 
 
 def metrics_sum(sample=pd.DataFrame):
@@ -167,7 +169,6 @@ if __name__ == "__main__":
     metrics = raw_prepare(metrics)
     metrics["exp_type"] = metrics["flatten_expression"].map(lambda exp: metrics_type(exp=exp))
     metrics["astatus"] = metrics["id"].map(lambda id: "dead" if id in nouse_metric_ids else "alive")
-
 
     # metrics_sum(sample=metrics)
     # metrics_flexp_sum(sample=metrics)

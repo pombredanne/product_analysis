@@ -63,25 +63,21 @@ def chart_summary(sample=pd.DataFrame, das=pd.DataFrame):
 def chart_type_summary(sample=pd.DataFrame):
     grouped_type = sample.groupby(["chart_type"])["id"].agg("count").rename("Charts")
     grouped_atype = sample[sample.status == "activated"].groupby(["chart_type"])["id"].agg("count").rename("Active Charts")
+    grouped_projid = sample.groupby(["project_id","chart_type"])["id"].agg("count").rename("count").reset_index().groupby(["chart_type"])["count"].agg([np.mean, np.median, np.std])
 
-    f = sample[sample.chart_type == "funnel"]
-    print(f.groupby("project_id")["id"].agg("count"))
+    print(grouped_projid.sort_values(by="mean", ascending=False))
 
-    # grouped_projid = sample.groupby(["project_id","chart_type"])["id"].agg("count").rename("count").reset_index().groupby(["chart_type"])["count"].agg([np.mean, np.median, np.std])
-    #
-    # print(grouped_projid.sort_values(by="mean", ascending=False))
-    #
-    # per = (round(grouped_atype*100 / grouped_type, 3)).rename("per")
-    #
-    # summary = pd.concat([grouped_atype, grouped_type, per], axis=1).sort_values(by="Active Charts", ascending=False)
-    #
-    # fig, axes = plt.subplots(nrows=1, ncols=2)
-    # summary[["Active Charts", "Charts"]].plot.bar(ax=axes[0]).set_title('Usage', fontsize=15)
-    # percentage = (summary["Active Charts"] / np.sum( summary["Active Charts"]))
-    # percentage.plot(kind='pie', figsize=(6, 6), subplots=True, labels=None) ; axes[1].set_title("Chart Type Share"); axes[1].set_ylabel('')
-    # print(percentage)
-    # print(summary.sort_values(by="per", ascending=False))
-    # plt.show()
+    per = (round(grouped_atype*100 / grouped_type, 3)).rename("per")
+
+    summary = pd.concat([grouped_atype, grouped_type, per], axis=1).sort_values(by="Active Charts", ascending=False)
+
+    fig, axes = plt.subplots(nrows=1, ncols=2)
+    summary[["Active Charts", "Charts"]].plot.bar(ax=axes[0]).set_title('Usage', fontsize=15)
+    percentage = (summary["Active Charts"] / np.sum( summary["Active Charts"]))
+    percentage.plot(kind='pie', figsize=(6, 6), subplots=True, labels=None) ; axes[1].set_title("Chart Type Share"); axes[1].set_ylabel('')
+    print(percentage)
+    print(summary.sort_values(by="per", ascending=False))
+    plt.show()
 
 
 def dashboard_project_sum(sample=pd.DataFrame):
@@ -395,40 +391,41 @@ def chart_breaking_level(c=pd.DataFrame):
 
 if __name__ == "__main__":
 
-    # print(get_charts_info())
-    # print(get_dashboard_info())
-    # date_columns = ["created_at", "updated_at"]
-    #
     projects = pd.read_csv("./0508/user_project_org_info.csv", low_memory=False)
-    aproject_ids =  projects[~projects.first_date_of_getting_pv.isnull()]["project_id"].drop_duplicates()
-    #
-    charts = pd.read_csv("./chart_dashboard/charts.csv", low_memory=False, parse_dates=["created_at"])
+    aproject_ids =  projects[~projects.first_date_of_getting_pv.isnull()][["project_id", "level"]].drop_duplicates("project_id")
 
+    charts = pd.read_csv("./chart_dashboard/charts.csv", low_memory=False, parse_dates=["created_at"])
     dashboard = pd.read_csv("./chart_dashboard/dashboards.csv", low_memory=False, parse_dates=["created_at", "updated_at"])
-    # subs = pd.read_csv("./chart_dashboard/subscriptions.csv", low_memory=False)
-    # users = pd.read_csv("./0502/user_org_project_info.csv", low_memory=False)
-    #
+
+    subs = pd.read_csv("./chart_dashboard/subscriptions.csv", low_memory=False)
+    users = pd.read_csv("./0502/user_org_project_info.csv", low_memory=False)
+
     dashboard = raw_prepare(dashboard)
     dashboard = dashboard[dashboard.project_id.isin(aproject_ids)]
 
+    default_dashboards = ["市场概况分析", "用户概况分析", "产品概况分析"]
+    default_charts = ["用户获取_Web访问来源", "用户获取_Web端自主投放渠道跟踪",
+                      "用户获取_APP下载渠道", "用户属性_地域分布",
+                      "用户属性_设备属性", "产品使用概况_受访域名", "产品使用概况_Web端跳出率", "产品使用概况_访问时长"]
+
+
     charts = raw_prepare(charts)
-    charts = charts[charts.project_id.isin(aproject_ids)]
+    charts = charts[charts.project_id.isin(aproject_ids["project_id"]) ]
 
     # chart_metrics(c=charts)
 
-    ndd = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull())].reset_index(drop=True)
-    print(len(aproject_ids))
-    dash_saviatar = saviatar_speed(ndd)
-    print(dash_saviatar.head(20))
-
-    chart_savitar = saviatar_speed(charts)
-    print(chart_savitar.head(20))
+    ndd = dashboard[~(dashboard.status == "hidden") & ~(dashboard.type == "realtime") & ~(dashboard.chart_ids.isnull()) & (~dashboard.name.isin(default_dashboards))].reset_index(drop=True)
+    # dash_saviatar = saviatar_speed(ndd)
+    # print(dash_saviatar.head(20))
+    #
+    # chart_savitar = saviatar_speed(charts)
+    # print(chart_savitar.head(20))
 
     # chart_type_summary(charts)
     # chart_summary(charts, ndd)
     # dashboard_project_sum(ndd)
     # dashboard_usage(ndd)
     # dashboard_chart2(ndd, charts=charts)
-    # sub_chart_sum(subs, charts=charts, users=users)
+    sub_chart_sum(subs, charts=charts, users=users)
     # sub_dashboard_sum(subs, dashboard=ndd, charts=charts)
-    # board_name_sum(sample=ndd)
+    # board_name_sum(sample=ndd, name="dashboard")

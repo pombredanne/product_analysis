@@ -57,7 +57,7 @@ def udf_project_sum(cs=pd.DataFrame, ps=pd.DataFrame):
 if __name__ == '__main__':
     cs_udf = pd.read_csv("./chart_dashboard/cs.csv", parse_dates=["created_at", "updated_at"])
     ps_udf = pd.read_csv("./chart_dashboard/ps.csv", parse_dates=["created_at", "updated_at"])
-    pids = pd.read_csv("./0508/user_project_org_info.csv", low_memory=False)
+    pids = pd.read_csv("./0508/user_org_project_info.csv", low_memory=False)
     pids = pids[~pids.first_date_of_getting_pv.isnull()]["project_id"].drop_duplicates().sort_values()
 
     cs_udf = raw_prepare(cs_udf)
