@@ -30,7 +30,7 @@ def user_simulator(start_date=None,end_date=None,period=None,file_name=None,user
                             columns=["user_id","sim_date"])
 
     user_info_df = pd.read_csv(file_name, encoding="utf-8",
-                            parse_dates=["org_created_at", "project_created_at", "first_date_of_getting_pv", "latest_date_of_getting_pv"],
+                            parse_dates=["user_created_at", "org_created_at", "project_created_at", "first_date_of_getting_pv", "latest_date_of_getting_pv"],
                                dtype={"user_id_project":str, "user_id_user":str, "user_id_organization" : str},
                                low_memory=False).drop_duplicates("user_id_project")
 
@@ -50,10 +50,11 @@ def user_simulator(start_date=None,end_date=None,period=None,file_name=None,user
 if __name__ == "__main__":
 
     start_date = "2017/1/1"
-    end_date   = "2017/4/9"
-    user_max_id = 64369
+    end_date   = "2017/7/4"
+    user_max_id = 73895
 
 
-    users = user_simulator(start_date,end_date,period=1,file_name="./0502/user_org_info.csv",user_max_id=user_max_id)
-    users.to_csv("user_sim_v2" + ".csv")
+    users = user_simulator(start_date,end_date,period=1,file_name="./0702/user_project_org_info.csv",user_max_id=user_max_id)
+    print(users)
+    # users.to_csv("user_sim_v2" + ".csv")
 

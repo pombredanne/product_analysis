@@ -1,9 +1,13 @@
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+import  re
 from functools import reduce
 from simulator import user_simulator
-import  re
+from pyroaring import BitMap
+from pandas import HDFStore , read_hdf
+
+
 
 session_behavior = ["avg_duration","visits"]
 view_event = ["chart_all_pv", "chart_list_pv", "create_chart_pv", "edit_chart_pv",
@@ -68,8 +72,6 @@ def behavior_data_generator(files=[],key=[]):
     result = reduce(lambda left, right: pd.merge(left, right, how="left", on=["user", "Date"]), dfs)
     result = result.fillna(0)
 
-    result["avg_duration"] = result["avg_duration"].map(lambda time : time * 60)
-
     print("Start to Calculate Financial Model")
 
     result["consumption_pv_sum"] = result["create_chart_pv"] + result["create_dashboard_pv"] + result["edit_chart_pv"] + result["create_funnel_pv"] + result["edit_dashboard_pv"]
@@ -103,8 +105,8 @@ def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavio
         overlap_per  = []
 
         for j in range( i + 1, periods):
-            cohort_init   = set(sample[ ( sample["week_iso"] == i ) & ( sample["visits"] > 0 ) & ( sample["funnel_all_pv"] > 0 ) ]["user_id"])
-            cohort_return = set(sample[ ( sample["week_iso"] == j ) & ( sample["visits"] > 0 ) & ( sample["funnel_all_pv"] > 0 ) ]["user_id"])
+            cohort_init   = BitMap(sample[(sample["week_iso"] == i) & (sample["visits"] > 0) & (sample["funnel_all_pv"] > 0) ]["user_id"].astype(int))
+            cohort_return = BitMap(sample[(sample["week_iso"] == j) & (sample["visits"] > 0) & (sample["funnel_all_pv"] > 0) ]["user_id"].astype(int))
 
             overlap_users = list(cohort_init & cohort_return)
 
@@ -115,6 +117,11 @@ def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavio
         cohorts_user.append(overlap_tseries)
         cohorts_num.append(overlap_num)
         cohorts_per.append(overlap_per)
+        # cohorts_per.append([None]*(i-1) +  overlap_per)
+
+    # cohorts_per_df = pd.DataFrame(data=cohorts_per, columns=range(1, periods-1), index=range(1, periods-1)).transpose()
+    # cohorts_per_df.plot()
+    # plt.show()
 
     if not number:
         cohorts_obj = ( cohorts_per,  cohorts_user )
@@ -175,6 +182,21 @@ def get_metrics_columns_name():
     return columns
 
 
+def save_data(data=pd.DataFrame, hdfs=True, dir=""):
+
+    import datetime
+
+    file_name = "raw_data_" + datetime.datetime.now().strftime("%y%m%d")
+
+    # data.to_csv(dir + "/" + file_name + ".csv", encoding="utf-8")
+    # print("Data saved as csv already")
+    hdf = HDFStore(file_name + ".h5")
+
+    hdf.put(file_name, result, format="table", data_columns=True, encoding="utf-8")
+    hdf.close()
+    print("Data saved as HDF already")
+
+
 if __name__ == "__main__":
     gio_files = ["./0702/20170101-20170702_user_访问量&访问时长.csv",
                  "./0702/20170101-20170702_FQY_主要功能数据_U_user_table_PV浏览类.csv",
@@ -183,37 +205,25 @@ if __name__ == "__main__":
     user_project_org_file = "./0702/user_project_org_info.csv"
 
     user_max_id = 73895
-
-
     result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2016/12/1", simEndDate="2017/6/25")
-    # result = result.drop(["mobile", "name", "email", "sale"], axis=1)
 
+    save_data(data=result, dir="./0702")
 
-    result.to_csv("./0702/raw_data_0702.csv", encoding="utf-8")
+    # result = read_hdf("raw_data_170702.h5", "raw_data_170702")
 
-    #
-    # behavioral_data = behavior_data_generator(files=gio_files,key=["Date","user"])
-    #
-    # behavioral_data.to_csv("behavior_data.csv",encoding="utf-8")
-
-
-    # users = user_generator(sim_user_filter="user_join_org_info_raw.csv",user_org_filter="user_org_info.txt")
-    #
-    #
-    # result = pd.read_csv("./0626/raw_data_0626v2.csv", encoding="utf-8")
-    #
     # core_user   = get_core_user(result)
     # active_user = get_active_user(result)
     # casual_user = get_casual_user(result)
-    #
-    #
-    # print("DON'T BE PANICK. DATA ARE PREPARED")
 
+    # cohort_analysis(periods=26, sample=casual_user, number=False)
+
+    # print("DON'T BE PANICK. DATA ARE PREPARED")
+    #
     # active_user = active_user[active_user.days_get_pv > 270 & active_user.days_get_pv < 360 ]
     # casual_user = casual_user[casual_user.days_get_pv > 270 & casual_user.days_get_pv < 360 ]
     # core_user = core_user[core_user.days_get_pv > 270 & core_user.days_get_pv < 360 ]
-
-
+    #
+    #
     # WN = 26
     #
     # i = 0
