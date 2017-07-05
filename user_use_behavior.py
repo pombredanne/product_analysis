@@ -1,12 +1,10 @@
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import  re
 from functools import reduce
 from simulator import user_simulator
 from pyroaring import BitMap
 from pandas import HDFStore , read_hdf
-
 
 
 session_behavior = ["avg_duration","visits"]
@@ -27,20 +25,16 @@ click_event = ["dashboard_filter_clck", "dashboard_usercohort_clck",
                       "retention_time_clck", "retention_Dimension_clck",
                       "retention_detail_behavior_clck", "scene_time_clck", "scene_filter_clck", "scene_usercohort_clck"]
 
-interactive_expl_sum_key = ["user_details_pv","retention_detail_behavior_clck",
-"funnel_time_clck","funnel_trend_clck","funnel_Dimension_clck",
-"chart_list_time_clck","chart_list_filter_clck","chart_detail_filter_clck",
-"chart_detail_time_clck","chart_detail_usercohort_clck",
-"heatmap_use_imp",
-"retention_time_clck","retention_Dimension_clck",
-"dashboard_usercohort_clck","dashboard_filter_clck","dashboard_time_clck","scene_time_clck","scene_filter_clck","scene_usercohort_clck"]
+interactive_expl_sum_key = ["user_details_pv", "retention_detail_behavior_clck", "funnel_time_clck","funnel_trend_clck","funnel_Dimension_clck",
+"chart_list_time_clck","chart_list_filter_clck","chart_detail_filter_clck", "chart_detail_time_clck","chart_detail_usercohort_clck",
+"heatmap_use_imp", "retention_time_clck","retention_Dimension_clck", "dashboard_usercohort_clck","dashboard_filter_clck","dashboard_time_clck","scene_time_clck","scene_filter_clck","scene_usercohort_clck"]
 
 computed_fields = ["consumption_pv_sum", "interactive_action_sum",
                    "single_diagram_view", "funnel_report_view",
                    "analytics_dashboard", "visual_analytic", "net_income", "capital_expenditure"]
 
+behavior_names = [ session_behavior, view_event, click_event ]
 
-behavior_names = [session_behavior, view_event, click_event]
 
 def secs_convertor(time=None):
     try:
@@ -116,12 +110,12 @@ def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavio
 
         cohorts_user.append(overlap_tseries)
         cohorts_num.append(overlap_num)
-        cohorts_per.append(overlap_per)
-        # cohorts_per.append([None]*(i-1) +  overlap_per)
+        # cohorts_per.append(overlap_per)
+        cohorts_per.append([None]*(i-1) +  overlap_per)
 
-    # cohorts_per_df = pd.DataFrame(data=cohorts_per, columns=range(1, periods-1), index=range(1, periods-1)).transpose()
-    # cohorts_per_df.plot()
-    # plt.show()
+    cohorts_per_df = pd.DataFrame(data=cohorts_per, columns=range(1, periods-1), index=range(1, periods-1)).transpose()
+    cohorts_per_df.plot()
+    plt.show()
 
     if not number:
         cohorts_obj = ( cohorts_per,  cohorts_user )
@@ -129,7 +123,6 @@ def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavio
         cohorts_obj = ( cohorts_num , cohorts_user )
 
     print("Cohort Analysis Completed")
-
     return cohorts_obj
 
 
@@ -188,13 +181,16 @@ def save_data(data=pd.DataFrame, hdfs=True, dir=""):
 
     file_name = "raw_data_" + datetime.datetime.now().strftime("%y%m%d")
 
-    # data.to_csv(dir + "/" + file_name + ".csv", encoding="utf-8")
-    # print("Data saved as csv already")
-    hdf = HDFStore(file_name + ".h5")
+    data.to_csv(dir + "/" + file_name + ".csv", encoding="utf-8")
+    print("Data saved as csv already")
 
-    hdf.put(file_name, result, format="table", data_columns=True, encoding="utf-8")
-    hdf.close()
-    print("Data saved as HDF already")
+    if hdfs:
+        hdf = HDFStore(file_name + ".h5")
+        hdf.put(file_name, result, format="table", data_columns=True, encoding="utf-8")
+        hdf.close()
+        print("Data saved as HDF already")
+    else:
+        pass
 
 
 if __name__ == "__main__":
@@ -209,12 +205,12 @@ if __name__ == "__main__":
 
     save_data(data=result, dir="./0702")
 
-    # result = read_hdf("raw_data_170702.h5", "raw_data_170702")
-
+    # result = read_hdf("./0702/raw_data_170705.h5", "raw_data_170705.h5")
+    #
     # core_user   = get_core_user(result)
     # active_user = get_active_user(result)
     # casual_user = get_casual_user(result)
-
+    #
     # cohort_analysis(periods=26, sample=casual_user, number=False)
 
     # print("DON'T BE PANICK. DATA ARE PREPARED")
@@ -222,7 +218,6 @@ if __name__ == "__main__":
     # active_user = active_user[active_user.days_get_pv > 270 & active_user.days_get_pv < 360 ]
     # casual_user = casual_user[casual_user.days_get_pv > 270 & casual_user.days_get_pv < 360 ]
     # core_user = core_user[core_user.days_get_pv > 270 & core_user.days_get_pv < 360 ]
-    #
     #
     # WN = 26
     #
@@ -245,5 +240,4 @@ if __name__ == "__main__":
     #         print(s)
     #     i += 1
     #     print("\n")
-    #
     # print("FUCK ! I AM DONE OF IT")
