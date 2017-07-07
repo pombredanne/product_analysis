@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import  re
+import time
 from functools import reduce
 from simulator import user_simulator
 from pyroaring import BitMap
@@ -86,44 +87,47 @@ def user_generator(sim_user_filter=None,user_org_filter=None,user_max_id=None, s
     return user_simulator(start_date=startDate,end_date=endDate, period=1, file_name=sim_user_filter, user_max_id=user_max_id )
 
 
-def cohort_analysis(periods=None, sample=None, init_behavior=None,return_behavior=None, number=True,need_user_id=False):
+def cohort_analysis(endP=None, sample=None, init_behavior=None,return_behavior=None, number=True,need_user_id=False):
 
     cohorts_user = []
     cohorts_num  = []
-    cohorts_per  = []
+    cohorts = []
+    periods = endP + 1
 
-    for i in range(1,periods-1):
+    for i in range(1, periods-1):
 
         overlap_tseries = []
         overlap_num  = []
-        overlap_per  = []
+        cohort_tmp = []
 
         for j in range( i + 1, periods):
-            cohort_init   = BitMap(sample[(sample["week_iso"] == i) & (sample["visits"] > 0) & (sample["funnel_all_pv"] > 0) ]["user_id"].astype(int))
-            cohort_return = BitMap(sample[(sample["week_iso"] == j) & (sample["visits"] > 0) & (sample["funnel_all_pv"] > 0) ]["user_id"].astype(int))
+            cohort_init   = set(sample[(sample["month"] == i) & (sample["visits"] > 0)]["user_id"])
+            cohort_return = set(sample[(sample["month"] == j) & (sample["visits"] > 0)]["user_id"])
 
             overlap_users = list(cohort_init & cohort_return)
 
+            overlap_user_num = len(overlap_users)
+            cohort_init_num = len(cohort_init)
+
             overlap_tseries.append(overlap_users)
-            overlap_num.append(len(overlap_users))
-            overlap_per.append(round(len(overlap_users)/len(cohort_init)*100, 2))
+            overlap_num.append(overlap_user_num)
+            cohort_tmp.append(cohort_init_num)
 
         cohorts_user.append(overlap_tseries)
         cohorts_num.append(overlap_num)
-        # cohorts_per.append(overlap_per)
-        cohorts_per.append([None]*(i-1) +  overlap_per)
+        cohorts.append(cohort_tmp)
 
-    cohorts_per_df = pd.DataFrame(data=cohorts_per, columns=range(1, periods-1), index=range(1, periods-1)).transpose()
-    cohorts_per_df.plot()
-    plt.show()
+    cohorts = pd.DataFrame(data=cohorts, columns=range(1, periods-1), index=range(1, periods-1))
+    cohorts_num_df = pd.DataFrame(data=cohorts_num, columns=range(1, periods-1), index=range(1, periods-1))
 
-    if not number:
-        cohorts_obj = ( cohorts_per,  cohorts_user )
-    else:
-        cohorts_obj = ( cohorts_num , cohorts_user )
+    overview = ["overview"]
 
-    print("Cohort Analysis Completed")
-    return cohorts_obj
+    for i in range(1, periods-1):
+        overview.append(round(cohorts_num_df[i].sum()*100/cohorts[i].sum(), 2))
+
+    cohort_table =  pd.concat([cohorts[1].rename("sample size"), round(cohorts_num_df * 100 / cohorts, 2)], axis=1)
+
+    return cohort_table
 
 
 def get_tableau_raw_data(user_src=pd.DataFrame,behavior_src=pd.DataFrame):
@@ -159,11 +163,11 @@ def get_core_user(sample=pd.DataFrame):
 
 
 def get_active_user(sample=pd.DataFrame):
-    return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] > 0)  | (sample["consumption_pv_sum"] > 0 ) & (sample["level"] == "C(非优先客户)") | (sample["level"] == "B(小型商机)") & (sample["pay_status"] == "已付费")]
+    return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] > 0)  | (sample["consumption_pv_sum"] > 0 )]
 
 
 def get_casual_user(sample=pd.DataFrame):
-    return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] == 0) & (sample["consumption_pv_sum"] == 0 ) & (sample["level"] == "C(非优先客户)" ) | (sample["level"] == "B(小型商机)") & (sample["pay_status"] == "已付费")]
+    return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] == 0) & (sample["consumption_pv_sum"] == 0 )]
 
 
 def get_login_user(sample=pd.DataFrame):
@@ -179,7 +183,7 @@ def save_data(data=pd.DataFrame, hdfs=True, dir=""):
 
     import datetime
 
-    file_name = "raw_data_" + datetime.datetime.now().strftime("%y%m%d")
+    file_name = "raw_data_v2" + datetime.datetime.now().strftime("%y%m%d")
 
     data.to_csv(dir + "/" + file_name + ".csv", encoding="utf-8")
     print("Data saved as csv already")
@@ -194,24 +198,30 @@ def save_data(data=pd.DataFrame, hdfs=True, dir=""):
 
 
 if __name__ == "__main__":
-    gio_files = ["./0702/20170101-20170702_user_访问量&访问时长.csv",
-                 "./0702/20170101-20170702_FQY_主要功能数据_U_user_table_PV浏览类.csv",
-                 "./0702/20170101-20170702_FQY_主要功能数据_U_user_table_action交互类.csv"]
+    gio_files = ["./0702v2/20161201-20170402_user_访问量&访问时长.csv",
+                 "./0702v2/20161201-20170402_FQY_主要功能数据_U_user_table_PV浏览类.csv",
+                 "./0702v2/20161201-20170402_FQY_主要功能数据_U_user_table_action交互类.csv"]
 
-    user_project_org_file = "./0702/user_project_org_info.csv"
+    user_project_org_file = "./0702v2/user_project_org_info.csv"
 
     user_max_id = 73895
-    result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2016/12/1", simEndDate="2017/6/25")
+    # result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2016/12/1", simEndDate="2017/4/2")
 
-    save_data(data=result, dir="./0702")
+    # save_data(data=result, dir="./0702v2")
 
     # result = read_hdf("./0702/raw_data_170705.h5", "raw_data_170705.h5")
-    #
+
+    result = pd.read_csv("./0702/raw_data_170706.csv")
+
     # core_user   = get_core_user(result)
     # active_user = get_active_user(result)
     # casual_user = get_casual_user(result)
-    #
-    # cohort_analysis(periods=26, sample=casual_user, number=False)
+    login_user = get_login_user(result)
+
+    # print(len(login_user))
+
+    # cohort_analysis(endP=26, sample=login_user, number=False)
+    cohort_analysis(endP=6, sample=login_user, number=False)
 
     # print("DON'T BE PANICK. DATA ARE PREPARED")
     #
