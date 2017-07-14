@@ -1,7 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import  re
-import time
 from functools import reduce
 from simulator import user_simulator
 from pyroaring import BitMap
@@ -36,7 +35,6 @@ computed_fields = ["consumption_pv_sum", "interactive_action_sum",
 
 behavior_names = [ session_behavior, view_event, click_event ]
 
-
 def secs_convertor(time=None):
     try:
         time_array = re.compile("(.*?)分(.*?)秒").findall(str(time))
@@ -64,8 +62,7 @@ def behavior_data_generator(files=[],key=[]):
             dfs.append(pd.read_csv(files[file_i], encoding="utf-16", sep="\t", dtype={"user": str}, names=df_names, header=0,
                         parse_dates=['Date'], infer_datetime_format=True, low_memory=False))
 
-    result = reduce(lambda left, right: pd.merge(left, right, how="left", on=["user", "Date"]), dfs)
-    result = result.fillna(0)
+    result = reduce(lambda left, right: pd.merge(left, right, how="left", on=["user", "Date"]), dfs).fillna(0)
 
     print("Start to Calculate Financial Model")
 
@@ -92,6 +89,7 @@ def cohort_analysis(endP=None, sample=None, init_behavior=None,return_behavior=N
     cohorts_user = []
     cohorts_num  = []
     cohorts = []
+    overview = []
     periods = endP + 1
 
     for i in range(1, periods-1):
@@ -101,8 +99,8 @@ def cohort_analysis(endP=None, sample=None, init_behavior=None,return_behavior=N
         cohort_tmp = []
 
         for j in range( i + 1, periods):
-            cohort_init   = set(sample[(sample["month"] == i) & (sample["visits"] > 0)]["user_id"])
-            cohort_return = set(sample[(sample["month"] == j) & (sample["visits"] > 0)]["user_id"])
+            cohort_init   = BitMap(sample[(sample["week_iso"] == i) & (sample["visits"] > 0)]["user_id"].astype(int))
+            cohort_return = BitMap(sample[(sample["week_iso"] == j) & (sample["visits"] > 0)]["user_id"].astype(int))
 
             overlap_users = list(cohort_init & cohort_return)
 
@@ -120,12 +118,10 @@ def cohort_analysis(endP=None, sample=None, init_behavior=None,return_behavior=N
     cohorts = pd.DataFrame(data=cohorts, columns=range(1, periods-1), index=range(1, periods-1))
     cohorts_num_df = pd.DataFrame(data=cohorts_num, columns=range(1, periods-1), index=range(1, periods-1))
 
-    overview = ["overview"]
-
     for i in range(1, periods-1):
         overview.append(round(cohorts_num_df[i].sum()*100/cohorts[i].sum(), 2))
 
-    cohort_table =  pd.concat([cohorts[1].rename("sample size"), round(cohorts_num_df * 100 / cohorts, 2)], axis=1)
+    cohort_table =  pd.concat([cohorts[1].rename("sample size"), round(cohorts_num_df*100/cohorts, 2)], axis=1)
 
     return cohort_table
 
@@ -143,7 +139,16 @@ def get_tableau_raw_data(user_src=pd.DataFrame,behavior_src=pd.DataFrame):
 
 def get_tableau_raw_data_from_source(files=[], user_max_id=None, ffile="", simStartDate="", simEndDate=""):
 
+    import time
+
+    t1 = time.time()
+
     behavioral_data = behavior_data_generator(files=files, key=["Date", "user"])
+
+    t2 = time.time()
+
+    print(t2 - t1)
+
     print("Behavior Data Generation Completed")
 
     users = user_generator(sim_user_filter=ffile, user_max_id=user_max_id, startDate=simStartDate, endDate=simEndDate)
@@ -183,7 +188,7 @@ def save_data(data=pd.DataFrame, hdfs=True, dir=""):
 
     import datetime
 
-    file_name = "raw_data_v2" + datetime.datetime.now().strftime("%y%m%d")
+    file_name = "raw_data_" + datetime.datetime.now().strftime("%y%m%d")
 
     data.to_csv(dir + "/" + file_name + ".csv", encoding="utf-8")
     print("Data saved as csv already")
@@ -197,31 +202,75 @@ def save_data(data=pd.DataFrame, hdfs=True, dir=""):
         pass
 
 
+def user_migration(sample, endP):
+
+    periods = endP + 1
+    casual_tmp = []
+    active_tmp = []
+
+    for i in range(1, periods):
+
+        active_user_init = BitMap(get_active_user(sample[(sample["week_iso"] == i -1 ) & (sample["visits"] > 0)])["user_id"].astype(int))
+        casual_user_init = BitMap(get_casual_user(sample[(sample["week_iso"] == i -1) & (sample["visits"] > 0)])["user_id"].astype(int))
+        active_user_return = BitMap(get_active_user(sample[(sample["week_iso"] == i) & (sample["visits"] > 0)])["user_id"].astype(int))
+        casual_user_return = BitMap(get_casual_user(sample[(sample["week_iso"] == i) & (sample["visits"] > 0)])["user_id"].astype(int))
+
+        active_init_num = len(active_user_init)
+        active_return_num = len(active_user_return)
+
+        casual_init_num = len(casual_user_init)
+        casual_return_num = len(casual_user_return)
+
+        casual_up_num = len((active_user_return & casual_user_init))
+        active_down_num = len((casual_user_return & active_user_init))
+        casual_remain_num = len((casual_user_init & casual_user_return))
+        active_remain_num = len((active_user_init & active_user_return))
+
+        try:
+            casual_tmp.append([casual_init_num, casual_return_num, round(casual_up_num*100/casual_init_num, 2) , round(casual_remain_num*100 / casual_init_num, 2), round((casual_init_num - casual_remain_num - casual_up_num)*100 / casual_init_num, 2 )])
+            active_tmp.append([active_init_num, active_return_num, round(active_down_num*100/active_init_num, 2), round(active_remain_num*100 / active_init_num, 2), round((active_init_num - active_remain_num - active_down_num)*100 / active_init_num, 2)])
+        except:
+            print("Something goes wrong")
+
+    cu = pd.DataFrame( data=casual_tmp, columns=["last", "current", "up", "remain", "drop"], index=range(2, periods))
+    au = pd.DataFrame( data=active_tmp, columns=["last", "current", "down", "remain", "drop"], index=range(2, periods))
+
+    print(len(cu))
+    cu[["up", "remain", "drop"]].plot(title="Casual User Migration")
+    au[["down", "remain", "drop"]].plot(title="Active User Migration")
+
+    plt.show()
+
+
 if __name__ == "__main__":
-    gio_files = ["./0702v2/20161201-20170402_user_访问量&访问时长.csv",
-                 "./0702v2/20161201-20170402_FQY_主要功能数据_U_user_table_PV浏览类.csv",
-                 "./0702v2/20161201-20170402_FQY_主要功能数据_U_user_table_action交互类.csv"]
+    gio_files = ["./week_data/20161226-20170709_user_访问量&访问时长.csv",
+                 "./week_data/20161226-20170709_FQY_主要功能数据_U_user_table_PV浏览类.csv",
+                 "./week_data/20161226-20170709_FQY_主要功能数据_U_user_table_action交互类_old.csv"]
 
-    user_project_org_file = "./0702v2/user_project_org_info.csv"
+    user_project_org_file = "./0710/user_project_org_info.csv"
 
-    user_max_id = 73895
-    # result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2016/12/1", simEndDate="2017/4/2")
+    import time
+    user_max_id = 75111
 
-    # save_data(data=result, dir="./0702v2")
+    result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2016/12/26", simEndDate="2017/7/9")
 
+    # save_data(data=result, dir="./week_data")
     # result = read_hdf("./0702/raw_data_170705.h5", "raw_data_170705.h5")
 
-    result = pd.read_csv("./0702/raw_data_170706.csv")
+    # result = pd.read_csv("./week_data/raw_data_170712.csv")
 
-    # core_user   = get_core_user(result)
+    # user_migration(sample=result, endP=27)
+
+
+
     # active_user = get_active_user(result)
     # casual_user = get_casual_user(result)
-    login_user = get_login_user(result)
+    # login_user = get_login_user(result)
 
     # print(len(login_user))
 
     # cohort_analysis(endP=26, sample=login_user, number=False)
-    cohort_analysis(endP=6, sample=login_user, number=False)
+    # cohort_analysis(endP=6, sample=login_user, number=False)
 
     # print("DON'T BE PANICK. DATA ARE PREPARED")
     #
