@@ -67,7 +67,10 @@ def behavior_data_generator(files=[],key=[]):
     print("Start to Calculate Financial Model")
 
     result["consumption_pv_sum"] = result["create_chart_pv"] + result["create_dashboard_pv"] + result["edit_chart_pv"] + result["create_funnel_pv"] + result["edit_dashboard_pv"]
-    result["interactive_action_sum"] = result["user_details_pv"]+result["retention_detail_behavior_clck"]+result["funnel_time_clck"]+result["funnel_trend_clck"]+result["funnel_Dimension_clck"]+result["chart_list_time_clck"]+result["chart_list_filter_clck"]+result["chart_detail_filter_clck"]+result["chart_detail_time_clck"]+result["chart_detail_usercohort_clck"]+result["heatmap_use_imp"]+result["retention_time_clck"]+result["retention_Dimension_clck"]+result["dashboard_usercohort_clck"]+result["dashboard_filter_clck"]+result["dashboard_time_clck"]
+    result["interactive_action_sum"] = result["user_details_pv"]+result["retention_detail_behavior_clck"]+result["funnel_time_clck"]\
+                                       +result["funnel_trend_clck"]+result["funnel_Dimension_clck"]+result["chart_list_time_clck"]+result["chart_list_filter_clck"]\
+                                       +result["chart_detail_filter_clck"]+result["chart_detail_time_clck"]+result["chart_detail_usercohort_clck"]+result["heatmap_use_imp"]\
+                                       +result["retention_time_clck"]+result["retention_Dimension_clck"]+result["dashboard_usercohort_clck"]+result["dashboard_filter_clck"]+result["dashboard_time_clck"]
     result["single_diagram_view"] = result["chart_all_pv"] - result["chart_list_pv"] - result["create_chart_pv"]-result["edit_chart_pv"]
     result["funnel_report_view"] = result["funnel_all_pv"] - result["create_funnel_pv"]
 
@@ -139,16 +142,7 @@ def get_tableau_raw_data(user_src=pd.DataFrame,behavior_src=pd.DataFrame):
 
 def get_tableau_raw_data_from_source(files=[], user_max_id=None, ffile="", simStartDate="", simEndDate=""):
 
-    import time
-
-    t1 = time.time()
-
     behavioral_data = behavior_data_generator(files=files, key=["Date", "user"])
-
-    t2 = time.time()
-
-    print(t2 - t1)
-
     print("Behavior Data Generation Completed")
 
     users = user_generator(sim_user_filter=ffile, user_max_id=user_max_id, startDate=simStartDate, endDate=simEndDate)
@@ -207,6 +201,7 @@ def user_migration(sample, endP):
     periods = endP + 1
     casual_tmp = []
     active_tmp = []
+    login_tmp = []
 
     for i in range(1, periods):
 
@@ -214,52 +209,73 @@ def user_migration(sample, endP):
         casual_user_init = BitMap(get_casual_user(sample[(sample["week_iso"] == i -1) & (sample["visits"] > 0)])["user_id"].astype(int))
         active_user_return = BitMap(get_active_user(sample[(sample["week_iso"] == i) & (sample["visits"] > 0)])["user_id"].astype(int))
         casual_user_return = BitMap(get_casual_user(sample[(sample["week_iso"] == i) & (sample["visits"] > 0)])["user_id"].astype(int))
+        login_user_init = BitMap(sample[(sample["week_iso"] == i -1) & (sample["visits"] > 0) & (~sample["first_date_of_getting_pv"].isnull()) ]["user_id"].astype(int))
+        login_user_return = BitMap(sample[(sample["week_iso"] == i) & (sample["visits"] > 0) & (~sample["first_date_of_getting_pv"].isnull()) ]["user_id"].astype(int))
 
         active_init_num = len(active_user_init)
         active_return_num = len(active_user_return)
+        active_down_to_casual_num = len((casual_user_return & active_user_init))
+        active_remain_num = len((active_user_init & active_user_return))
 
         casual_init_num = len(casual_user_init)
         casual_return_num = len(casual_user_return)
-
-        casual_up_num = len((active_user_return & casual_user_init))
-        active_down_num = len((casual_user_return & active_user_init))
+        casual_up_to_active_num = len((active_user_return & casual_user_init))
         casual_remain_num = len((casual_user_init & casual_user_return))
-        active_remain_num = len((active_user_init & active_user_return))
+
+        login_only_init = login_user_init - casual_user_init - active_user_init
+        login_only_return = login_user_return - casual_user_return - active_user_return
+
+        casual_down_to_login = (login_only_return & casual_user_init)
+        active_down_to_login = (login_only_return & active_user_init)
+
+        login_remain_num = len((login_only_return & login_only_init))
+        login_to_active_num = len((active_user_return & login_only_init))
+        login_to_casual_num = len((casual_user_return & login_only_init))
+
 
         try:
-            casual_tmp.append([casual_init_num, casual_return_num, round(casual_up_num*100/casual_init_num, 2) , round(casual_remain_num*100 / casual_init_num, 2), round((casual_init_num - casual_remain_num - casual_up_num)*100 / casual_init_num, 2 )])
-            active_tmp.append([active_init_num, active_return_num, round(active_down_num*100/active_init_num, 2), round(active_remain_num*100 / active_init_num, 2), round((active_init_num - active_remain_num - active_down_num)*100 / active_init_num, 2)])
+            casual_tmp.append([len(login_only_return), casual_init_num, casual_return_num, casual_remain_num, casual_up_to_active_num, len(casual_down_to_login),
+                               round(casual_up_to_active_num*100/casual_init_num, 2) ,round(len(casual_down_to_login)*100 / casual_init_num, 2), round(casual_remain_num*100 / casual_init_num, 2),
+                               round((casual_init_num - casual_remain_num - casual_up_to_active_num)*100 / casual_init_num, 2 )])
+            active_tmp.append([len(login_only_return), active_init_num, active_return_num, active_remain_num, active_down_to_casual_num, len(active_down_to_login),
+                               round(active_down_to_casual_num*100/active_init_num, 2),round(len(active_down_to_login)*100 / active_init_num, 2), round(active_remain_num*100 / active_init_num, 2),
+                               round((active_init_num - active_remain_num - active_down_to_casual_num)*100 / active_init_num, 2)])
+            login_tmp.append([len(login_only_init), len(login_only_return), login_remain_num, login_to_casual_num, login_to_active_num,
+                              round(login_to_active_num*100/len(login_only_init), 2), round(login_to_casual_num*100/ len(login_only_init), 2), round(login_remain_num*100/ len(login_only_init), 2)])
+
         except:
             print("Something goes wrong")
 
-    cu = pd.DataFrame( data=casual_tmp, columns=["last", "current", "up", "remain", "drop"], index=range(2, periods))
-    au = pd.DataFrame( data=active_tmp, columns=["last", "current", "down", "remain", "drop"], index=range(2, periods))
+    cu = pd.DataFrame( data=casual_tmp, columns=["login_only", "last", "current", "remain", "up_to_active", "down_to_login", "up_to_active_per", "down_to_login_per",  "remain_per", "drop_per"], index=range(2, periods))
+    au = pd.DataFrame( data=active_tmp, columns=["login_only", "last", "current", "remain", "down_to_casual", "down_to_login",  "down_to_casual_per", "down_to_login_per", "remain_per", "drop_per"], index=range(2, periods))
+    lu = pd.DataFrame( data=login_tmp, columns=["last", "current", "remain", "up_to_casual", "up_to_active",  "up_to_active_per", "up_to_casual_per", "remain_per"], index=range(2, periods))
 
-    print(len(cu))
-    cu[["up", "remain", "drop"]].plot(title="Casual User Migration")
-    au[["down", "remain", "drop"]].plot(title="Active User Migration")
-
-    plt.show()
+    print(cu)
+    print(au)
+    print(lu)
+    # cu[["up", "remain", "drop"]].plot(title="Casual User Migration")
+    # au[["down", "remain", "drop"]].plot(title="Active User Migration")
+    #
+    # plt.show()
 
 
 if __name__ == "__main__":
-    gio_files = ["./week_data/20161226-20170709_user_访问量&访问时长.csv",
-                 "./week_data/20161226-20170709_FQY_主要功能数据_U_user_table_PV浏览类.csv",
-                 "./week_data/20161226-20170709_FQY_主要功能数据_U_user_table_action交互类_old.csv"]
+    gio_files = ["./week_data/0717/20170710-20170716_user_访问量&访问时长.csv",
+                 "./week_data/0717/20170710-20170716_FQY_主要功能数据_U_user_table_PV浏览类.csv",
+                 "./week_data/0717/20170710-20170716_FQY_主要功能数据_U_user_table_action交互类_old.csv"]
 
-    user_project_org_file = "./0710/user_project_org_info.csv"
+    user_project_org_file = "./0717/user_project_org_info.csv"
 
-    import time
-    user_max_id = 75111
+    user_max_id = 76155
 
-    result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2016/12/26", simEndDate="2017/7/9")
+    # result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2017/7/10", simEndDate="2017/7/17")
 
-    # save_data(data=result, dir="./week_data")
+    # save_data(data=result, dir="./week_data/0717")
     # result = read_hdf("./0702/raw_data_170705.h5", "raw_data_170705.h5")
 
-    # result = pd.read_csv("./week_data/raw_data_170712.csv")
+    result = pd.read_csv("./week_data/all_0717_week.csv")
 
-    # user_migration(sample=result, endP=27)
+    user_migration(sample=result, endP=27)
 
 
 
