@@ -10,7 +10,6 @@ def weeks_generator(start_date=None,end_date=None,period=7):
     end   = parser.parse(end_date)
     sd = str(start.isocalendar()[0]) + "-W" + str(start.isocalendar()[1]) +"-1"
     start =  datetime.strptime(sd, "%Y-W%W-%w" )
-
     return pd.date_range(start,end,freq=pd.tseries.offsets.DateOffset(days=period))
 
 def days_generator(start_date=None,end_date=None,period=1):

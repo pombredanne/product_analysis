@@ -4,7 +4,10 @@ from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email.utils import formatdate
 from email import encoders
+from datetime import datetime
 
+
+cWN = datetime.now().isocalendar()[1]
 def send_emil(user, pwd, recipient, subject, body):
 
     gmail_user= user
@@ -22,9 +25,9 @@ def send_emil(user, pwd, recipient, subject, body):
     msg.attach(MIMEText(TEXT))
 
     part = MIMEBase('application', 'octet-stream')
-    part.set_payload(open("weekly_report.xlsx", "rb").read())
+    part.set_payload(open("weekly_report_WN" +str(cWN)+".xlsx", "rb").read())
     encoders.encode_base64(part)
-    part.add_header('Content-Disposition', 'attachment; filename="weekly_report.xlsx"')
+    part.add_header('Content-Disposition', 'attachment; filename="weekly_report_WN'+ str(cWN) +'.xlsx"')
     msg.attach(part)
 
     try:
@@ -34,17 +37,17 @@ def send_emil(user, pwd, recipient, subject, body):
         server.login(gmail_user, gmail_pwd)
         server.sendmail(FROM, To, msg.as_string())
         server.close()
-        print("Successfully Send the Email")
-
+        print("Email Sent Successfully")
     except:
-        print("Failed to send email")
+        print("Email Sent Failed")
+
 
 if __name__ == "__main__":
 
     account = "lixueqian@growing.io"
     pwd = "gogo9966gogo"
-    subject = "1 st report"
-    recipients = "lixueqian@growing.io"
-    text = "hello world"
+    subject = "Week " + str(cWN) + " Product Data "
+    recipients = ["liulinxi@growing.io"]
+    text = "数据在附件"
 
     send_emil(user=account, pwd=pwd, subject=subject, recipient=recipients, body=text )

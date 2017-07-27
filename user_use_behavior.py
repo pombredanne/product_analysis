@@ -209,8 +209,9 @@ def user_migration(sample, endP):
         casual_user_init = BitMap(get_casual_user(sample[(sample["week_iso"] == i -1) & (sample["visits"] > 0)])["user_id"].astype(int))
         active_user_return = BitMap(get_active_user(sample[(sample["week_iso"] == i) & (sample["visits"] > 0)])["user_id"].astype(int))
         casual_user_return = BitMap(get_casual_user(sample[(sample["week_iso"] == i) & (sample["visits"] > 0)])["user_id"].astype(int))
-        login_user_init = BitMap(sample[(sample["week_iso"] == i -1) & (sample["visits"] > 0) & (~sample["first_date_of_getting_pv"].isnull()) ]["user_id"].astype(int))
-        login_user_return = BitMap(sample[(sample["week_iso"] == i) & (sample["visits"] > 0) & (~sample["first_date_of_getting_pv"].isnull()) ]["user_id"].astype(int))
+
+        login_user_init = BitMap(sample[(sample["week_iso"] == i -1) & (sample["visits"] > 0) & (~sample["first_date_of_getting_pv"].isnull())]["user_id"].astype(int))
+        login_user_return = BitMap(sample[(sample["week_iso"] == i) & (sample["visits"] > 0) & (~sample["first_date_of_getting_pv"].isnull())]["user_id"].astype(int))
 
         active_init_num = len(active_user_init)
         active_return_num = len(active_user_return)
@@ -250,32 +251,36 @@ def user_migration(sample, endP):
     au = pd.DataFrame( data=active_tmp, columns=["login_only", "last", "current", "remain", "down_to_casual", "down_to_login",  "down_to_casual_per", "down_to_login_per", "remain_per", "drop_per"], index=range(2, periods))
     lu = pd.DataFrame( data=login_tmp, columns=["last", "current", "remain", "up_to_casual", "up_to_active",  "up_to_active_per", "up_to_casual_per", "remain_per"], index=range(2, periods))
 
-    print(cu)
-    print(au)
-    print(lu)
-    # cu[["up", "remain", "drop"]].plot(title="Casual User Migration")
-    # au[["down", "remain", "drop"]].plot(title="Active User Migration")
-    #
-    # plt.show()
+    return [ cu, au , lu ]
+
+
+def get_short_return_of_equity(sample=pd.DataFrame):
+    return sample["net_income"].sum() / len(get_active_user(sample=sample)["user_id"].drop_duplicates())
+
+
+def get_short_return_of_asset(sample=pd.DataFrame):
+    return -1 * round(sample["net_income"].sum() / sample["capital_expenditure"].sum(), 2)
 
 
 if __name__ == "__main__":
-    gio_files = ["./week_data/0717/20170710-20170716_user_访问量&访问时长.csv",
-                 "./week_data/0717/20170710-20170716_FQY_主要功能数据_U_user_table_PV浏览类.csv",
-                 "./week_data/0717/20170710-20170716_FQY_主要功能数据_U_user_table_action交互类_old.csv"]
+    gio_files = ["./week_data/0724/20170717-20170723_user_访问量&访问时长.csv",
+                 "./week_data/0724/20170717-20170723_FQY_主要功能数据_U_user_table_PV浏览类.csv",
+                 "./week_data/0724/20170717-20170723_FQY_主要功能数据_U_user_table_action交互类_old.csv"]
 
-    user_project_org_file = "./0717/user_project_org_info.csv"
+    user_project_org_file = "./week_data/0724/user_project_org_info.csv"
 
-    user_max_id = 76155
+    user_max_id = 77685
 
-    # result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2017/7/10", simEndDate="2017/7/17")
+    result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2017/7/17", simEndDate="2017/7/23")
 
-    # save_data(data=result, dir="./week_data/0717")
+    save_data(data=result, dir="./week_data/0724")
     # result = read_hdf("./0702/raw_data_170705.h5", "raw_data_170705.h5")
 
-    result = pd.read_csv("./week_data/all_0717_week.csv")
-
-    user_migration(sample=result, endP=27)
+    # result = pd.read_csv("./week_data/all_0726_week.csv")
+    #
+    # cu, au, lu =  user_migration(sample=result, endP=30)
+    #
+    # print(cu)
 
 
 
@@ -285,7 +290,8 @@ if __name__ == "__main__":
 
     # print(len(login_user))
 
-    # cohort_analysis(endP=26, sample=login_user, number=False)
+    # cohort = cohort_analysis(endP=30, sample=casual_user, number=False)
+    # print(cohort)
     # cohort_analysis(endP=6, sample=login_user, number=False)
 
     # print("DON'T BE PANICK. DATA ARE PREPARED")
