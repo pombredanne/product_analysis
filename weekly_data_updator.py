@@ -134,7 +134,7 @@ date_formate = workbook.add_format({'num_format': 'dd/mm/yyyy'})
 for wn in range(len(week_nums)):
     worksheet.write_datetime( xl_rowcol_to_cell(rid -1, wn+1), week_nums[wn +1 ], date_formate )
 
-worksheet.write(rid-1, 0, "week number")
+worksheet.write(rid-1, 0, "Week Start Date")
 
 wnrid = rid
 
