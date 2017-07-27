@@ -47,7 +47,7 @@ if __name__ == "__main__":
     account = "lixueqian@growing.io"
     pwd = "gogo9966gogo"
     subject = "Week " + str(cWN) + " Product Data "
-    recipients = ["liulinxi@growing.io"]
+    recipients = ["product@growing.io", "lixueqian@growing.io", "liulinxi@growing.io"]
     text = "数据在附件"
 
     send_emil(user=account, pwd=pwd, subject=subject, recipient=recipients, body=text )
