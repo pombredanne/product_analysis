@@ -7,7 +7,7 @@ import datetime
 import pandas as pd
 from threading import Timer
 import pytz
-from raw_process import utc_to_local
+from user_use_behavior import get_tableau_raw_data_from_source
 
 
 def authToken(secret, project, ai, tm):
@@ -26,11 +26,20 @@ def get_code(prkey, pid, ai, tm, a):
 
 def query_request(chart_id, startDate, endDate, prkey, code, interval):
     headers = {"X-Client-Id": prkey, "Authorization": code}
-    url =  "https://gta.growingio.com/projects/nxog09md/charts/" + chart_id + ".json" + "?startTime=" + startDate + "&endTime=" + endDate + "&interval=" + interval
+    url =  "https://gta.growingio.com/projects/nxog09md/charts/" + chart_id + ".json" + "?startTime=" + str(int(startDate.timestamp() *1000)) + "&endTime=" + str(int(endDate.timestamp() *1000)) + "&interval=" + interval
     return requests.get(url=url, headers=headers).json()
 
 
-def scheduled_query(pkey, prkey, ai, pid,  start, end, sources, interval ):
+def scheduled_query(pkey, prkey, ai, pid, sources):
+
+    import os
+
+    sds = str(datetime.datetime.now().isocalendar()[0]) + "-W" + str(datetime.datetime.now().isocalendar()[1]) + "-1"
+    start_date = datetime.datetime.strptime(sds, "%Y-W%W-%w").strftime("%m%d")
+
+    rdir = "week_data/" + start_date
+    if not os.path.exists(rdir):
+        os.makedirs(rdir)
 
     tm = str(int(time.time() * 1000))
 
@@ -38,11 +47,13 @@ def scheduled_query(pkey, prkey, ai, pid,  start, end, sources, interval ):
     code = get_code(prkey=prkey, pid=pid, ai=ai, tm=tm, a=sig)
 
     for source in sources:
-        result = query_request(source["chart_id"], start, end, prkey, code, interval)
-        names = result["name"]
+        result = query_request(source["chart_id"], source["start"], source["end"], prkey, code, source["interval"])
         data =  pd.DataFrame(data=result["data"], columns=source["cols"])
         data = data.assign(Date=data["Date"].apply(lambda x: datetime.datetime.fromtimestamp(int(x) / 1000, tz=pytz.utc).astimezone(pytz.timezone("Asia/Shanghai")).date()))
-        print(data)
+        print(data["Date"].drop_duplicates())
+        file_name = source["start"].strftime("%Y%m%d")  + "-" + source["end"].strftime("%Y%m%d")  + "_" +  source["name"] + ".csv"
+        data.to_csv(rdir + "/" + file_name, index=False)
+        print("File " + file_name + " saved")
 
 
 if __name__ == "__main__":
@@ -73,39 +84,50 @@ if __name__ == "__main__":
 
     session_col = ["Date", "user", "avg_duration", "visits"]
 
-    sources =[
+    day_interval = "86400000"
+    week_interval = "604800000"
+
+    interval = week_interval
+
+    startDate = datetime.datetime(2017, 7, 17)
+    endDate = datetime.datetime(2017, 7, 23)
+
+    sources = [
         {
             "name" : "user_访问量&访问时长",
             "chart_id" : "a9a5KAE9",
-            "cols" : session_col
+            "cols" : session_col,
+            "interval" : interval,
+            "start" : startDate,
+            "end" : endDate
         },
         {
             "name" : "FQY_主要功能数据_U_user_table_action交互类_old",
             "chart_id" : "4PKq5AD9",
-            "cols" : click_col
+            "cols" : click_col,
+            "interval" : interval,
+            "start" : startDate,
+            "end" : endDate
         },
         {
             "name" : "FQY_主要功能数据_U_user_table_PV浏览类",
             "chart_id" : "j9yDBAZo",
-            "cols" : view_col
+            "cols" : view_col,
+            "interval" : interval,
+            "start" : startDate,
+            "end" : endDate
         }
     ]
 
-
     sig = authToken(secret=pkey, project=pid, ai=ai, tm=tm)
     code = get_code(prkey=prkey, pid=pid, ai=ai, tm=tm, a=sig)
-    day_interval = "86400000"
-    week_interval = "604800000"
-
-    endDate = str(int(datetime.datetime(2017, 7, 8).timestamp() * 1000))
-    startDate = str(int(datetime.datetime(2017, 7, 1).timestamp() * 1000))
 
     for source in sources:
         try:
-            query_request(source["chart_id"], startDate, endDate, prkey, code, day_interval)
+            query_request(source["chart_id"], source["start"], source["end"], prkey, code, source["interval"])
             Timer(15, requests.Session.close)
         except:
             print("Somthing goes wrong")
 
-    t = Timer(mins * 60, scheduled_query, [pkey, prkey, ai, pid, startDate, endDate, sources, day_interval], )
+    t = Timer(mins * 60, scheduled_query, [pkey, prkey, ai, pid, sources])
     t.start()
