@@ -49,7 +49,7 @@ def secs_convertor(time=None):
     return result
 
 
-def behavior_data_generator(files=[],key=[]):
+def behavior_data_generator_from_file(files=[], key=[]):
 
     if len(files) == 0:
         return []
@@ -77,6 +77,34 @@ def behavior_data_generator(files=[],key=[]):
     result["analytics_dashboard"] = result["dashboard_all_pv"]-result["realtime_pv"]-result["create_dashboard_pv"]-result["edit_dashboard_pv"]-result["dashboard_list_pv"]
 
     result["visual_analytic"] = result["single_diagram_view"] + result["funnel_report_view"] + result["analytics_dashboard"] + result["retention_all_pv"] + result["scene_all_pv"] - result["scene_list_pv"]
+    result["net_income"] = result["visual_analytic"]
+    result["capital_expenditure"] = -1 * result["consumption_pv_sum"]
+
+    return result
+
+def behavior_data_generator_from_api(data=[], keys=[]):
+    result = reduce(lambda left, right: pd.merge(left, right, how="left", on=keys), data).fillna(0)
+
+    result["consumption_pv_sum"] = result["create_chart_pv"] + result["create_dashboard_pv"] + result["edit_chart_pv"] + \
+                                   result["create_funnel_pv"] + result["edit_dashboard_pv"]
+    result["interactive_action_sum"] = result["user_details_pv"] + result["retention_detail_behavior_clck"] + result[
+        "funnel_time_clck"] \
+                                       + result["funnel_trend_clck"] + result["funnel_Dimension_clck"] + result[
+                                           "chart_list_time_clck"] + result["chart_list_filter_clck"] \
+                                       + result["chart_detail_filter_clck"] + result["chart_detail_time_clck"] + result[
+                                           "chart_detail_usercohort_clck"] + result["heatmap_use_imp"] \
+                                       + result["retention_time_clck"] + result["retention_Dimension_clck"] + result[
+                                           "dashboard_usercohort_clck"] + result["dashboard_filter_clck"] + result[
+                                           "dashboard_time_clck"]
+    result["single_diagram_view"] = result["chart_all_pv"] - result["chart_list_pv"] - result["create_chart_pv"] - \
+                                    result["edit_chart_pv"]
+    result["funnel_report_view"] = result["funnel_all_pv"] - result["create_funnel_pv"]
+
+    result["analytics_dashboard"] = result["dashboard_all_pv"] - result["realtime_pv"] - result["create_dashboard_pv"] - \
+                                    result["edit_dashboard_pv"] - result["dashboard_list_pv"]
+
+    result["visual_analytic"] = result["single_diagram_view"] + result["funnel_report_view"] + result[
+        "analytics_dashboard"] + result["retention_all_pv"] + result["scene_all_pv"] - result["scene_list_pv"]
     result["net_income"] = result["visual_analytic"]
     result["capital_expenditure"] = -1 * result["consumption_pv_sum"]
 
@@ -122,7 +150,12 @@ def cohort_analysis(endP=None, sample=None, init_behavior=None,return_behavior=N
     cohorts_num_df = pd.DataFrame(data=cohorts_num, columns=range(1, periods-1), index=range(1, periods-1))
 
     for i in range(1, periods-1):
-        overview.append(round(cohorts_num_df[i].sum()*100/cohorts[i].sum(), 2))
+        dn = cohorts[i].sum()
+        if dn == 0:
+            value = 0
+        else:
+            value = round(cohorts_num_df[i].sum()*100/cohorts[i].sum(), 2)
+        overview.append(value)
 
     cohort_table =  pd.concat([cohorts[1].rename("sample size"), round(cohorts_num_df*100/cohorts, 2)], axis=1)
 
@@ -142,7 +175,23 @@ def get_tableau_raw_data(user_src=pd.DataFrame,behavior_src=pd.DataFrame):
 
 def get_tableau_raw_data_from_source(files=[], user_max_id=None, ffile="", simStartDate="", simEndDate=""):
 
-    behavioral_data = behavior_data_generator(files=files, key=["Date", "user"])
+    behavioral_data = behavior_data_generator_from_file(files=files, key=["Date", "user"])
+    print("Behavior Data Generation Completed")
+
+    users = user_generator(sim_user_filter=ffile, user_max_id=user_max_id, startDate=simStartDate, endDate=simEndDate)
+    print("User Data Generation Completed")
+
+    columns = session_behavior + view_event + click_event + computed_fields
+    result = pd.merge(users, behavioral_data, how="left", left_on=["user_id", "sim_date"], right_on=["user", "Date"])
+    print("Merging User Data and Behavior Data Completed")
+
+    result[columns] = result[columns].fillna(0)
+
+    return result
+
+def get_tableau_raw_data_from_api(data=[], user_max_id=None, ffile="", simStartDate="", simEndDate=""):
+
+    behavioral_data = behavior_data_generator_from_api(data=data, keys=["Date", "user"])
     print("Behavior Data Generation Completed")
 
     users = user_generator(sim_user_filter=ffile, user_max_id=user_max_id, startDate=simStartDate, endDate=simEndDate)
@@ -263,20 +312,20 @@ def get_short_return_of_asset(sample=pd.DataFrame):
 
 
 if __name__ == "__main__":
-    gio_files = ["./week_data/0724/20170717-20170723_user_访问量&访问时长.csv",
-                 "./week_data/0724/20170717-20170723_FQY_主要功能数据_U_user_table_PV浏览类.csv",
-                 "./week_data/0724/20170717-20170723_FQY_主要功能数据_U_user_table_action交互类_old.csv"]
+    gio_files = ["./week_data/0731/20170724-20170730_user_访问量&访问时长.csv",
+                 "./week_data/0731/20170724-20170730_FQY_主要功能数据_U_user_table_PV浏览类.csv",
+                 "./week_data/0731/20170724-20170730_FQY_主要功能数据_U_user_table_action交互类_old.csv"]
 
-    user_project_org_file = "./week_data/0724/user_project_org_info.csv"
+    user_project_org_file = "./week_data/0731/user_project_org_info.csv"
 
-    user_max_id = 77685
+    user_max_id = 78381
 
-    result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2017/7/17", simEndDate="2017/7/23")
-
-    save_data(data=result, dir="./week_data/0724")
+    # result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2017/7/24", simEndDate="2017/7/30")
+    #
+    # save_data(data=result, dir="./week_data/0731")
     # result = read_hdf("./0702/raw_data_170705.h5", "raw_data_170705.h5")
 
-    # result = pd.read_csv("./week_data/all_0726_week.csv")
+    result = pd.read_csv("./week_data/all_0731_week.csv")
     #
     # cu, au, lu =  user_migration(sample=result, endP=30)
     #
@@ -285,12 +334,15 @@ if __name__ == "__main__":
 
 
     # active_user = get_active_user(result)
-    # casual_user = get_casual_user(result)
+    casual_user = get_casual_user(result)
     # login_user = get_login_user(result)
 
     # print(len(login_user))
 
-    # cohort = cohort_analysis(endP=30, sample=casual_user, number=False)
+    cohort = cohort_analysis(endP=30, sample=casual_user, number=False)
+    print(cohort)
+
+
     # print(cohort)
     # cohort_analysis(endP=6, sample=login_user, number=False)
 

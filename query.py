@@ -7,7 +7,7 @@ import datetime
 import pandas as pd
 from threading import Timer
 import pytz
-from user_use_behavior import get_tableau_raw_data_from_source
+from user_use_behavior import get_tableau_raw_data_from_api
 
 
 def authToken(secret, project, ai, tm):
@@ -30,7 +30,7 @@ def query_request(chart_id, startDate, endDate, prkey, code, interval):
     return requests.get(url=url, headers=headers).json()
 
 
-def scheduled_query(pkey, prkey, ai, pid, sources):
+def scheduled_query(pkey, prkey, ai, pid, sources, ffile, umid):
 
     import os
 
@@ -46,14 +46,20 @@ def scheduled_query(pkey, prkey, ai, pid, sources):
     sig = authToken(secret=pkey, project=pid, ai=ai, tm=tm)
     code = get_code(prkey=prkey, pid=pid, ai=ai, tm=tm, a=sig)
 
+    dfs = []
+
     for source in sources:
         result = query_request(source["chart_id"], source["start"], source["end"], prkey, code, source["interval"])
         data =  pd.DataFrame(data=result["data"], columns=source["cols"])
         data = data.assign(Date=data["Date"].apply(lambda x: datetime.datetime.fromtimestamp(int(x) / 1000, tz=pytz.utc).astimezone(pytz.timezone("Asia/Shanghai")).date()))
-        print(data["Date"].drop_duplicates())
-        file_name = source["start"].strftime("%Y%m%d")  + "-" + source["end"].strftime("%Y%m%d")  + "_" +  source["name"] + ".csv"
-        data.to_csv(rdir + "/" + file_name, index=False)
-        print("File " + file_name + " saved")
+        dfs.append(data)
+
+    result = get_tableau_raw_data_from_api(data=dfs, user_max_id=umid, ffile=ffile,  simStartDate=sources[0]["start"],simEndDate=sources[0]["end"] )
+
+    file_name = "raw_data_" + start_date +".csv"
+    result.to_csv(rdir + "/" + file_name, index=False)
+    print("File " + file_name + " saved")
+
 
 
 if __name__ == "__main__":
@@ -91,6 +97,8 @@ if __name__ == "__main__":
 
     startDate = datetime.datetime(2017, 7, 17)
     endDate = datetime.datetime(2017, 7, 23)
+    umid = 77685
+    ffile = "./week_data/0724/user_project_org_info.csv"
 
     sources = [
         {
@@ -129,5 +137,5 @@ if __name__ == "__main__":
         except:
             print("Somthing goes wrong")
 
-    t = Timer(mins * 60, scheduled_query, [pkey, prkey, ai, pid, sources])
+    t = Timer(mins * 60, scheduled_query, [pkey, prkey, ai, pid, sources, ffile, umid])
     t.start()

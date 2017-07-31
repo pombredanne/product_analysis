@@ -10,7 +10,7 @@ from user_use_behavior import user_migration
 from user_use_behavior import get_short_return_of_asset
 from email_service import send_emil
 
-raw = pd.read_csv("./week_data/all_0724_week.csv")
+raw = pd.read_csv("./week_data/all_0731_week.csv")
 raw = raw[(raw["year_iso"] == 2017)]
 
 cWN = datetime.now().isocalendar()[1]
@@ -31,10 +31,25 @@ short_return_of_asset = login_user.groupby("week_iso").apply(get_short_return_of
 
 """
     User growth ( Active User, Casual User )
+    
+    User Composition ( percentage )  might be better metrics than volumn
+     
+    Percentage of Active User in Login user per Week 
+    Percentage of Casual User in Login User per Week 
+    
 """
 
-active_users = get_active_user(login_user).groupby("week_iso")["user_id"].nunique()
-casual_users = get_casual_user(login_user).groupby("week_iso")["user_id"].nunique()
+active_users_w = get_active_user(login_user).groupby("week_iso")["user_id"].nunique().rename("active_user")
+casual_users_w = get_casual_user(login_user).groupby("week_iso")["user_id"].nunique().rename("casual_user")
+# login_users_w = login_user.groupby("week_iso")["user_id"].nunique().rename("login_user")
+
+# user_metrics = pd.concat([login_users_w, active_users_w, casual_users_w], axis=1 )
+
+# user_metrics =  user_metrics.assign(active_per=lambda x: round(x["active_user"]*100 / x["login_user"], 2))
+# user_metrics =  user_metrics.assign(casual_per=lambda x: round(x["casual_user"]*100 / x["login_user"], 2))
+# user_metrics =  user_metrics.assign(login_only_per=lambda x: 100 - x.active_per - x.casual_per )
+
+
 
 
 """
@@ -43,6 +58,8 @@ casual_users = get_casual_user(login_user).groupby("week_iso")["user_id"].nuniqu
 
 au_1Wreten = cohort_analysis(sample=get_active_user(raw), endP=cWN -1)[1]
 cu_1Wreten = cohort_analysis(sample=get_casual_user(raw), endP=cWN -1)[1]
+
+print(cu_1Wreten)
 
 """
     1 Week Migration ( Active User, Casual User )
@@ -79,13 +96,13 @@ metrics_ = [
         "name" : "Weekly Active User",
         "y_ax_label" : "user",
         "x_ax_label" : "Week",
-        "data" : active_users
+        "data" : active_users_w
     },
     {
         "name" : "Weekly Casual User",
         "y_ax_label" : "user",
         "x_ax_label" : "Week",
-        "data" : casual_users
+        "data" : casual_users_w
     },
     {
         "name" : "Active User 1 Week Retention Rate",
