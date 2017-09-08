@@ -33,7 +33,7 @@ def user_simulator(start_date=None,end_date=None,period=None,file_name=None,user
     else:
         pass
 
-    users_df = pd.DataFrame([ user_id for user_id in product(user_id_generator(1,user_max_id), days_generator(start_date,end_date,period)) ],
+    users_df = pd.DataFrame([ user_id for user_id in product(user_id_generator(1,user_max_id), weeks_generator(start_date,end_date)) ],
                             columns=["user_id","sim_date"])
 
     user_info_df = pd.read_csv(file_name, encoding="utf-8",
@@ -58,11 +58,11 @@ def user_simulator(start_date=None,end_date=None,period=None,file_name=None,user
 if __name__ == "__main__":
 
     start_date = "2017/1/1"
-    end_date   = "2017/7/4"
+    end_date   = "2017/2/2"
     user_max_id = 73895
 
 
-    users = user_simulator(start_date,end_date,period=1,file_name="./0702/user_project_org_info.csv",user_max_id=user_max_id)
-    print(users)
-    # users.to_csv("user_sim_v2" + ".csv")
+    users = user_simulator(start_date,end_date,period=1,file_name="./0717/user_project_org_info.csv",user_max_id=user_max_id)
+    # print(users)
+    users.to_csv("user_sim_v2" + ".csv")
 

@@ -11,7 +11,7 @@ session_behavior = ["avg_duration","visits"]
 view_event = ["chart_all_pv", "chart_list_pv", "create_chart_pv", "edit_chart_pv",
                   "dashboard_all_pv", "create_dashboard_pv", "edit_dashboard_pv","dashboard_list_pv",
                   "funnel_all_pv", "retention_all_pv", "user_details_pv", "realtime_pv","heatmap_use_imp",
-                  "create_funnel_pv", "scene_list_pv", "scene_all_pv"]
+                  "create_funnel_pv", "scene_list_pv", "scene_all_pv", "dashboard_chart_pv"]
 
 click_event = ["dashboard_filter_clck", "dashboard_usercohort_clck",
                       "dashboard_time_clck", "dashboard_create_save_clck",
@@ -71,11 +71,11 @@ def behavior_data_generator_from_file(files=[], key=[]):
                                        +result["funnel_trend_clck"]+result["funnel_Dimension_clck"]+result["chart_list_time_clck"]+result["chart_list_filter_clck"]\
                                        +result["chart_detail_filter_clck"]+result["chart_detail_time_clck"]+result["chart_detail_usercohort_clck"]+result["heatmap_use_imp"]\
                                        +result["retention_time_clck"]+result["retention_Dimension_clck"]+result["dashboard_usercohort_clck"]+result["dashboard_filter_clck"]+result["dashboard_time_clck"]
+
     result["single_diagram_view"] = result["chart_all_pv"] - result["chart_list_pv"] - result["create_chart_pv"]-result["edit_chart_pv"]
     result["funnel_report_view"] = result["funnel_all_pv"] - result["create_funnel_pv"]
 
-    result["analytics_dashboard"] = result["dashboard_all_pv"]-result["realtime_pv"]-result["create_dashboard_pv"]-result["edit_dashboard_pv"]-result["dashboard_list_pv"]
-
+    result["analytics_dashboard"] = result["dashboard_all_pv"]-result["realtime_pv"]-result["create_dashboard_pv"]-result["edit_dashboard_pv"]-result["dashboard_list_pv"] - result["dashboard_chart_pv"]
     result["visual_analytic"] = result["single_diagram_view"] + result["funnel_report_view"] + result["analytics_dashboard"] + result["retention_all_pv"] + result["scene_all_pv"] - result["scene_list_pv"]
     result["net_income"] = result["visual_analytic"]
     result["capital_expenditure"] = -1 * result["consumption_pv_sum"]
@@ -218,6 +218,49 @@ def get_casual_user(sample=pd.DataFrame):
     return sample[(sample["visual_analytic"] > 0) & (sample["interactive_action_sum"] == 0) & (sample["consumption_pv_sum"] == 0 )]
 
 
+def get_month_active_user(sample=pd.DataFrame):
+
+    months = sample["month"].drop_duplicates()
+    monthly_active_user = []
+
+    for month in months:
+
+        month_sample = sample[(sample["month"] == month) & (sample["year_iso"] == 2017) ]
+        month_users = month_sample.groupby(["user_id"])[["visual_analytic", "interactive_action_sum", "consumption_pv_sum"]].sum()
+
+        monthly_active_user.append([month, len(get_active_user(month_users))])
+
+    monthly_active_user = pd.DataFrame(data=monthly_active_user)
+
+    print(monthly_active_user)
+
+def get_reactivated_user(sample=pd.DataFrame, week_criteria=4, startWeek=int, endWeek=int):
+
+    from datetime import datetime
+    from dateutil import parser
+
+    reactivate_users = []
+    weeks = range(startWeek, endWeek+1)
+
+    for week in weeks:
+        dormant_raw = sample[(sample["week_iso"] >= (week - week_criteria)) &
+                      (sample["week_iso"] < week) &
+                      (sample["user_created_at"] < datetime.strptime("2017-W" + str(week - week_criteria) + "-1", "%Y-W%W-%w").date())]
+
+        user_week_visits_sum = dormant_raw.groupby(["user_id"])["visits"].agg("sum")
+
+        dormant_users = BitMap(user_week_visits_sum[user_week_visits_sum == 0].index.values)
+
+        activated_user = BitMap(get_active_user(sample[(sample["week_iso"] == week)])["user_id"].astype("int"))
+
+        reactivated_users = activated_user & dormant_users
+        reactivated_user_num = len(reactivated_users)
+        reactivate_users.append(reactivated_user_num)
+
+    return pd.DataFrame(data=reactivate_users, index=weeks)
+
+
+
 def get_login_user(sample=pd.DataFrame):
     return sample[(sample["visits"] > 0)]
 
@@ -312,35 +355,33 @@ def get_short_return_of_asset(sample=pd.DataFrame):
 
 
 if __name__ == "__main__":
-    gio_files = ["./week_data/0731/20170724-20170730_user_访问量&访问时长.csv",
-                 "./week_data/0731/20170724-20170730_FQY_主要功能数据_U_user_table_PV浏览类.csv",
-                 "./week_data/0731/20170724-20170730_FQY_主要功能数据_U_user_table_action交互类_old.csv"]
+    gio_files = ["/Users/apple/Desktop/Sophia/week_data2/20170904/20170828-20170903_user_访问量&访问时长.csv",
+                 "/Users/apple/Desktop/Sophia/week_data2/20170904/20170828-20170903_FQY_主要功能数据_U_user_table_PV浏览类.csv",
+                 "/Users/apple/Desktop/Sophia/week_data2/20170904/20170828-20170903_FQY_主要功能数据_U_user_table_action交互类_old.csv"]
 
-    user_project_org_file = "./week_data/0731/user_project_org_info.csv"
+    user_project_org_file = "/Users/apple/Desktop/Sophia/week_data2/20170904/user_project_org_info.csv"
 
-    user_max_id = 78381
+    user_max_id = 83995
 
-    # result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2017/7/24", simEndDate="2017/7/30")
-    #
-    # save_data(data=result, dir="./week_data/0731")
-    # result = read_hdf("./0702/raw_data_170705.h5", "raw_data_170705.h5")
+    result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2017/8/28", simEndDate="2017/8/28")
 
-    result = pd.read_csv("./week_data/all_0731_week.csv")
+    save_data(data=result, dir="/Users/apple/Desktop/Sophia/week_data2")
+
+    # result = pd.read_csv("/Users/apple/Desktop/Sophia/week_data2/all_0807_week.csv", parse_dates=["user_created_at"])
     #
     # cu, au, lu =  user_migration(sample=result, endP=30)
     #
     # print(cu)
 
-
-
     # active_user = get_active_user(result)
-    casual_user = get_casual_user(result)
+    # casual_user = get_casual_user(result)
     # login_user = get_login_user(result)
 
     # print(len(login_user))
 
-    cohort = cohort_analysis(endP=30, sample=casual_user, number=False)
-    print(cohort)
+    # cohort = cohort_analysis(endP=32, sample=active_user, number=False)
+    # print(cohort)
+
 
 
     # print(cohort)
