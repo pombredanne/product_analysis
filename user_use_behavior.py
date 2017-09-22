@@ -6,7 +6,6 @@ from simulator import user_simulator
 from pyroaring import BitMap
 from pandas import HDFStore , read_hdf
 
-
 session_behavior = ["avg_duration","visits"]
 view_event = ["chart_all_pv", "chart_list_pv", "create_chart_pv", "edit_chart_pv",
                   "dashboard_all_pv", "create_dashboard_pv", "edit_dashboard_pv","dashboard_list_pv",
@@ -51,6 +50,12 @@ def secs_convertor(time=None):
 
 def behavior_data_generator_from_file(files=[], key=[]):
 
+    """
+    :param files: 3 files required. 1. User visit ( cs1, visit number, visit duration ) 2. user page view 3. user button click 
+    :param key: "JOIN KEY". Default join keies are user_id and date from GrowingIO
+    :return: a Datafrmae of user with behavior data in period of time.   
+    """
+
     if len(files) == 0:
         return []
     else:
@@ -62,9 +67,13 @@ def behavior_data_generator_from_file(files=[], key=[]):
             dfs.append(pd.read_csv(files[file_i], encoding="utf-16", sep="\t", dtype={"user": str}, names=df_names, header=0,
                         parse_dates=['Date'], infer_datetime_format=True, low_memory=False))
 
+    """
+         reduce function will merge 3 files and fill na with 0  
+    """
     result = reduce(lambda left, right: pd.merge(left, right, how="left", on=["user", "Date"]), dfs).fillna(0)
 
     print("Start to Calculate Financial Model")
+
 
     result["consumption_pv_sum"] = result["create_chart_pv"] + result["create_dashboard_pv"] + result["edit_chart_pv"] + result["create_funnel_pv"] + result["edit_dashboard_pv"]
     result["interactive_action_sum"] = result["user_details_pv"]+result["retention_detail_behavior_clck"]+result["funnel_time_clck"]\
@@ -116,6 +125,16 @@ def user_generator(sim_user_filter=None,user_org_filter=None,user_max_id=None, s
 
 
 def cohort_analysis(endP=None, sample=None, init_behavior=None,return_behavior=None, number=True,need_user_id=False):
+    """
+    
+    :param endP: end period 
+    :param sample: select certain type of people 
+    :param init_behavior: start behavior . Input is column name
+    :param return_behavior: input is column name
+    :param number: return number or percentage
+    :param need_user_id: if true return user_id to know who fullfill the requirement
+    :return: return a cohort table 
+    """
 
     cohorts_user = []
     cohorts_num  = []
@@ -355,15 +374,15 @@ def get_short_return_of_asset(sample=pd.DataFrame):
 
 
 if __name__ == "__main__":
-    gio_files = ["/Users/apple/Desktop/Sophia/week_data2/20170904/20170828-20170903_user_访问量&访问时长.csv",
-                 "/Users/apple/Desktop/Sophia/week_data2/20170904/20170828-20170903_FQY_主要功能数据_U_user_table_PV浏览类.csv",
-                 "/Users/apple/Desktop/Sophia/week_data2/20170904/20170828-20170903_FQY_主要功能数据_U_user_table_action交互类_old.csv"]
+    gio_files = ["/Users/apple/Desktop/Sophia/week_data2/20170911/20170904-20170910_user_访问量&访问时长.csv",
+                 "/Users/apple/Desktop/Sophia/week_data2/20170911/20170904-20170910_FQY_主要功能数据_U_user_table_PV浏览类.csv",
+                 "/Users/apple/Desktop/Sophia/week_data2/20170911/20170904-20170910_FQY_主要功能数据_U_user_table_action交互类_old.csv"]
 
-    user_project_org_file = "/Users/apple/Desktop/Sophia/week_data2/20170904/user_project_org_info.csv"
+    user_project_org_file = "/Users/apple/Desktop/Sophia/week_data2/20170911/user_project_org_info.csv"
 
-    user_max_id = 83995
+    user_max_id = 84521
 
-    result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2017/8/28", simEndDate="2017/8/28")
+    result = get_tableau_raw_data_from_source(files=gio_files, user_max_id=user_max_id, ffile=user_project_org_file, simStartDate="2017/9/4", simEndDate="2017/9/4")
 
     save_data(data=result, dir="/Users/apple/Desktop/Sophia/week_data2")
 
